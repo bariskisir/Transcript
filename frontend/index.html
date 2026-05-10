@@ -1,0 +1,62 @@
+<!doctype html>
+<!-- Tauri desktop shell for the Transcript live transcription application. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Transcript</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main id="ct-app" class="ct-shell">
+      <header id="statusRow" class="ct-status-row">
+        <span id="statusText">Ready.</span>
+      </header>
+
+      <section class="ct-controls">
+        <div class="ct-api-row">
+          <button id="deepgramLink" class="ct-api-link" type="button" title="Open Deepgram Console">Deepgram API</button>
+          <input id="apiKeyInput" type="text" autocomplete="off" spellcheck="false" placeholder="Enter API key…" aria-label="Deepgram API key">
+          <button id="testButton" class="mini-button" type="button">Test &amp; Save</button>
+        </div>
+
+        <div class="ct-source-row">
+          <button id="speakerToggle" class="ct-switch" type="button" aria-pressed="true"><span></span></button>
+          <label for="speakerSelect">Speaker</label>
+          <select id="speakerSelect" title="Speaker" aria-label="Speaker"></select>
+        </div>
+
+        <div class="ct-source-row">
+          <button id="microphoneToggle" class="ct-switch" type="button" aria-pressed="true"><span></span></button>
+          <label for="microphoneSelect">Mic</label>
+          <select id="microphoneSelect" title="Microphone" aria-label="Microphone"></select>
+        </div>
+
+        <div class="ct-nav-row">
+          <button id="previousButton" class="ct-icon-button" type="button" title="Previous transcript" aria-label="Previous transcript">&lt;</button>
+          <span id="transcriptCounter" class="ct-counter">0/0</span>
+          <button id="nextButton" class="ct-icon-button" type="button" title="Next transcript" aria-label="Next transcript">&gt;</button>
+          <button id="newButton" class="ct-icon-button" type="button" title="New transcript" aria-label="New transcript">+</button>
+          <button id="deleteButton" class="ct-icon-button ct-delete-button" type="button" title="Delete transcript" aria-label="Delete transcript">×</button>
+          <select id="languageSelect" title="Language" aria-label="Language"></select>
+          <div class="ct-session-actions">
+            <button id="startButton" class="ct-primary" type="button">Start</button>
+            <button id="stopButton" type="button" hidden>Stop</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="ct-body">
+        <div class="ct-transcript-header">
+          <span id="transcriptMeta">No transcript selected</span>
+          <button id="copyButton" class="mini-button ct-copy-button" type="button">copy</button>
+        </div>
+        <div id="transcriptText" class="ct-transcript"></div>
+      </section>
+    </main>
+    <script src="app.js"></script>
+  </body>
+</html>

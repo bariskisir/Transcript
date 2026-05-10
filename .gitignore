@@ -1,0 +1,11 @@
+target/
+target-tauri/
+gen/
+node_modules/
+.vs/
+.idea/
+*.user
+*.suo
+*.db
+*.log
+.env
