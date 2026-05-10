@@ -14,6 +14,7 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build:
@@ -105,11 +106,15 @@ jobs:
           path: release-assets
           merge-multiple: true
 
+      - name: List release assets
+        shell: bash
+        run: find release-assets -type f -maxdepth 5 -print
+
       - name: Publish release assets
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: Transcript ${{ github.ref_name }}
-          files: release-assets/*
+          files: release-assets/**/*
           fail_on_unmatched_files: true
           generate_release_notes: true

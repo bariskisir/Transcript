@@ -4,17 +4,35 @@ use crate::domain::{AudioDevice, AudioSourceKind};
 use anyhow::{Context, Result, anyhow};
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{Host, SampleFormat, Stream, StreamConfig};
+use std::sync::mpsc as std_mpsc;
+use std::thread::JoinHandle;
 use tokio::sync::mpsc::Sender;
 
-/// Keeps an active audio stream alive by holding ownership of the stream.
+/// Keeps an active audio stream alive on its owner thread.
 pub struct AudioStreamHandle {
-    _stream: Stream,
+    stop_tx: Option<std_mpsc::Sender<()>>,
+    thread: Option<JoinHandle<()>>,
 }
 
 impl AudioStreamHandle {
-    /// Creates a new handle that keeps the given stream alive.
-    fn new(stream: Stream) -> Self {
-        Self { _stream: stream }
+    /// Creates a handle for a stream owner thread.
+    fn new(stop_tx: std_mpsc::Sender<()>, thread: JoinHandle<()>) -> Self {
+        Self {
+            stop_tx: Some(stop_tx),
+            thread: Some(thread),
+        }
+    }
+}
+
+impl Drop for AudioStreamHandle {
+    /// Stops the stream and waits until it is dropped on its owner thread.
+    fn drop(&mut self) {
+        if let Some(stop_tx) = self.stop_tx.take() {
+            let _ = stop_tx.send(());
+        }
+        if let Some(thread) = self.thread.take() {
+            let _ = thread.join();
+        }
     }
 }
 
@@ -64,21 +82,24 @@ pub fn list_devices() -> Vec<AudioDevice> {
 
 /// Starts microphone capture and forwards 16 kHz PCM chunks.
 pub fn start_microphone(device_id: &str, sender: Sender<Vec<u8>>) -> Result<AudioStreamHandle> {
-    let host = audio_host();
-    let device = host
-        .input_devices()?
-        .find(|device| device.name().ok().as_deref() == Some(device_id))
-        .or_else(|| host.default_input_device())
-        .context("No microphone device is available")?;
-    let supported = device.default_input_config()?;
-    let config: StreamConfig = supported.clone().into();
-    build_capture_stream(
-        &device,
-        config,
-        supported.sample_format(),
-        sender,
-        "Audio stream error",
-    )
+    let device_id = device_id.to_owned();
+    spawn_stream_thread("microphone-capture", move || {
+        let host = audio_host();
+        let device = host
+            .input_devices()?
+            .find(|device| device.name().ok().as_deref() == Some(device_id.as_str()))
+            .or_else(|| host.default_input_device())
+            .context("No microphone device is available")?;
+        let supported = device.default_input_config()?;
+        let config: StreamConfig = supported.clone().into();
+        build_capture_stream(
+            &device,
+            config,
+            supported.sample_format(),
+            sender,
+            "Audio stream error",
+        )
+    })
 }
 
 /// Starts speaker loopback capture and forwards 16 kHz PCM chunks.
@@ -91,21 +112,24 @@ pub fn start_speaker_loopback(
             "Speaker loopback is currently available on Windows only"
         ));
     }
-    let host = audio_host();
-    let device = host
-        .output_devices()?
-        .find(|device| device.name().ok().as_deref() == Some(device_id))
-        .or_else(|| host.default_output_device())
-        .context("No speaker device is available")?;
-    let supported = device.default_output_config()?;
-    let config: StreamConfig = supported.clone().into();
-    build_capture_stream(
-        &device,
-        config,
-        supported.sample_format(),
-        sender,
-        "Speaker loopback error",
-    )
+    let device_id = device_id.to_owned();
+    spawn_stream_thread("speaker-capture", move || {
+        let host = audio_host();
+        let device = host
+            .output_devices()?
+            .find(|device| device.name().ok().as_deref() == Some(device_id.as_str()))
+            .or_else(|| host.default_output_device())
+            .context("No speaker device is available")?;
+        let supported = device.default_output_config()?;
+        let config: StreamConfig = supported.clone().into();
+        build_capture_stream(
+            &device,
+            config,
+            supported.sample_format(),
+            sender,
+            "Speaker loopback error",
+        )
+    })
 }
 
 /// Builds and starts an input capture stream for any sample format.
@@ -115,7 +139,7 @@ fn build_capture_stream(
     sample_format: SampleFormat,
     sender: Sender<Vec<u8>>,
     error_label: &'static str,
-) -> Result<AudioStreamHandle> {
+) -> Result<Stream> {
     let channels = config.channels.max(1) as usize;
     let source_rate = config.sample_rate.0;
 
@@ -164,7 +188,40 @@ fn build_capture_stream(
         }
     };
     stream.play()?;
-    Ok(AudioStreamHandle::new(stream))
+    Ok(stream)
+}
+
+/// Starts a dedicated thread that owns and drops the CPAL stream.
+fn spawn_stream_thread<F>(name: &'static str, build_stream: F) -> Result<AudioStreamHandle>
+where
+    F: FnOnce() -> Result<Stream> + Send + 'static,
+{
+    let (ready_tx, ready_rx) = std_mpsc::channel();
+    let (stop_tx, stop_rx) = std_mpsc::channel();
+    let thread = std::thread::Builder::new()
+        .name(name.to_owned())
+        .spawn(move || match build_stream() {
+            Ok(stream) => {
+                let _ = ready_tx.send(Ok(()));
+                let _ = stop_rx.recv();
+                drop(stream);
+            }
+            Err(error) => {
+                let _ = ready_tx.send(Err(error.to_string()));
+            }
+        })
+        .context("Could not start audio capture thread")?;
+
+    match ready_rx
+        .recv()
+        .context("Audio capture thread stopped before initialization")?
+    {
+        Ok(()) => Ok(AudioStreamHandle::new(stop_tx, thread)),
+        Err(message) => {
+            let _ = thread.join();
+            Err(anyhow!(message))
+        }
+    }
 }
 
 /// Converts captured samples to mono 16 kHz PCM and sends them.

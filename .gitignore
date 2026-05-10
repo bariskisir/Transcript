@@ -1,6 +1,7 @@
 target/
 target-tauri/
 gen/
+frontend/dist/
 node_modules/
 .vs/
 .idea/
