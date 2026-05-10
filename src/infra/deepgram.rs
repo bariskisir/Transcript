@@ -6,7 +6,13 @@ use futures_util::{SinkExt, StreamExt};
 use http::header::{AUTHORIZATION, SEC_WEBSOCKET_PROTOCOL};
 use serde_json::Value;
 use tokio::sync::mpsc::Receiver;
+use tokio::time::{self, Duration, MissedTickBehavior};
 use tokio_tungstenite::tungstenite::{Message, client::IntoClientRequest};
+
+const KEEPALIVE_INTERVAL: Duration = Duration::from_secs(5);
+const SILENCE_FRAME_BYTES: usize = 16_000 / 10 * 2;
+const KEEPALIVE_MESSAGE: &str = r#"{"type":"KeepAlive"}"#;
+const CLOSE_STREAM_MESSAGE: &str = r#"{"type":"CloseStream"}"#;
 
 /// Event emitted by the Deepgram worker.
 #[derive(Debug)]
@@ -14,7 +20,7 @@ pub enum DeepgramEvent {
     /// Informational status update.
     Status(String),
     /// Interim transcript text.
-    Interim { source: String, text: String },
+    Interim { text: String },
     /// Final transcript text.
     Final { source: String, text: String },
     /// Worker error.
@@ -98,15 +104,37 @@ pub async fn stream_audio(
         }
     });
 
-    while let Some(chunk) = audio.recv().await {
-        if !chunk.is_empty() {
-            writer.send(Message::Binary(chunk.into())).await?;
+    let mut keepalive = time::interval(KEEPALIVE_INTERVAL);
+    keepalive.set_missed_tick_behavior(MissedTickBehavior::Delay);
+
+    loop {
+        tokio::select! {
+            chunk = audio.recv() => {
+                let Some(chunk) = chunk else {
+                    break;
+                };
+                if !chunk.is_empty() {
+                    writer.send(Message::Binary(chunk.into())).await?;
+                }
+            }
+            _ = keepalive.tick() => {
+                writer.send(Message::Binary(silent_pcm_frame().into())).await?;
+                writer.send(Message::Text(KEEPALIVE_MESSAGE.into())).await?;
+            }
         }
     }
 
+    let _ = writer
+        .send(Message::Text(CLOSE_STREAM_MESSAGE.into()))
+        .await;
     let _ = writer.close().await;
     let _ = read_task.await;
     Ok(())
+}
+
+/// Builds 100 ms of 16 kHz mono PCM16 silence.
+fn silent_pcm_frame() -> Vec<u8> {
+    vec![0; SILENCE_FRAME_BYTES]
 }
 
 /// Connects to Deepgram with the same auth protocol fallback as the browser example.
@@ -320,10 +348,7 @@ fn parse_deepgram_message(
             text: transcript,
         }
     } else {
-        DeepgramEvent::Interim {
-            source: source.to_owned(),
-            text: transcript,
-        }
+        DeepgramEvent::Interim { text: transcript }
     };
     let _ = events.send(event);
 }

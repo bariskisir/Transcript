@@ -2,7 +2,6 @@
 
 use super::state::AppState;
 use super::view::AppViewState;
-use crate::domain::MICROPHONE_LABEL;
 use crate::infra::deepgram::DeepgramEvent;
 use serde::Serialize;
 use tauri::{AppHandle, Emitter};
@@ -36,12 +35,7 @@ pub fn spawn_event_forwarder(
                     state.set_status(&message);
                     let _ = app_handle.emit("transcript-event", UiEvent::Status { message });
                 }
-                DeepgramEvent::Interim { source, text } => {
-                    let text = if source == MICROPHONE_LABEL {
-                        format!("{MICROPHONE_LABEL}: {text}")
-                    } else {
-                        text
-                    };
+                DeepgramEvent::Interim { text, .. } => {
                     let _ = app_handle.emit("transcript-event", UiEvent::Interim { text });
                 }
                 DeepgramEvent::Final { source, text } => {
