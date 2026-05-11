@@ -5,6 +5,8 @@ namespace TranscriptDom {
     statusRow: HTMLElement;
     statusText: HTMLElement;
     deepgramLink: HTMLElement;
+    developerLink: HTMLButtonElement;
+    sourceLink: HTMLButtonElement;
     apiKeyInput: HTMLInputElement;
     testButton: HTMLButtonElement;
     speakerToggle: HTMLElement;
@@ -29,6 +31,8 @@ namespace TranscriptDom {
       statusRow: requireElement("statusRow"),
       statusText: requireElement("statusText"),
       deepgramLink: requireElement("deepgramLink"),
+      developerLink: requireElement<HTMLButtonElement>("developerLink"),
+      sourceLink: requireElement<HTMLButtonElement>("sourceLink"),
       apiKeyInput: requireElement<HTMLInputElement>("apiKeyInput"),
       testButton: requireElement<HTMLButtonElement>("testButton"),
       speakerToggle: requireElement("speakerToggle"),

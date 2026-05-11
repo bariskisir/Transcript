@@ -9,8 +9,9 @@ mod infra;
 use anyhow::Result;
 use app::{
     AppState, create_transcript, delete_transcript, get_app_state, open_deepgram_site,
-    refresh_devices, save_settings, select_transcript_by_offset, spawn_event_forwarder,
-    start_capture, stop_capture, test_deepgram_key,
+    open_developer_site, open_source_site, refresh_devices, save_settings,
+    select_transcript_by_offset, spawn_event_forwarder, start_capture, stop_capture,
+    test_deepgram_key,
 };
 use infra::paths::app_paths;
 
@@ -41,7 +42,9 @@ fn main() -> Result<()> {
             start_capture,
             stop_capture,
             refresh_devices,
-            open_deepgram_site
+            open_deepgram_site,
+            open_developer_site,
+            open_source_site
         ])
         .run(tauri::generate_context!())
         .map_err(|error| anyhow::anyhow!(error.to_string()))?;

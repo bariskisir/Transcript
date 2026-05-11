@@ -214,6 +214,16 @@ impl AppState {
         shell::open_url("https://console.deepgram.com/")
     }
 
+    /// Opens the developer website in the user's default browser.
+    pub fn open_developer_site(&self) -> Result<()> {
+        shell::open_url("https://www.bariskisir.com")
+    }
+
+    /// Opens the source repository in the user's default browser.
+    pub fn open_source_site(&self) -> Result<()> {
+        shell::open_url("https://github.com/bariskisir/Transcript")
+    }
+
     // ── Methods used by event forwarder ─────────────────────────────
 
     /// Updates the status message.

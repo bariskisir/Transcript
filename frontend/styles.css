@@ -415,6 +415,44 @@ input:disabled {
   font-style: italic;
 }
 
+.app-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex: 0 0 auto;
+  min-height: 28px;
+  padding: 7px 14px 9px;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  background: rgba(15, 23, 42, 0.35);
+  backdrop-filter: blur(12px);
+}
+
+.footer-link {
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  padding: 0;
+  text-align: left;
+  white-space: nowrap;
+  transition: color var(--transition);
+}
+
+.footer-link:last-child {
+  text-align: right;
+}
+
+.footer-link:hover {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
 /* ── Scrollbar ─────────────────────────────────────────────────── */
 
 ::-webkit-scrollbar {

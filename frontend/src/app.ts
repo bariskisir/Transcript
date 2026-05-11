@@ -24,6 +24,14 @@ namespace TranscriptApp {
       void safeInvoke("open_deepgram_site");
     });
 
+    refs.developerLink.addEventListener("click", () => {
+      void safeInvoke("open_developer_site");
+    });
+
+    refs.sourceLink.addEventListener("click", () => {
+      void safeInvoke("open_source_site");
+    });
+
     refs.testButton.addEventListener("click", async () => {
       const attemptedKey = refs.apiKeyInput.value;
       await safeInvoke("save_settings", {

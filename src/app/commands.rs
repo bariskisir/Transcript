@@ -87,3 +87,17 @@ pub fn open_deepgram_site(state: State<'_, AppState>) -> CommandResult<()> {
         .open_deepgram_site()
         .map_err(|error| error.to_string())
 }
+
+/// Opens the developer website in the user's default browser.
+#[tauri::command]
+pub fn open_developer_site(state: State<'_, AppState>) -> CommandResult<()> {
+    state
+        .open_developer_site()
+        .map_err(|error| error.to_string())
+}
+
+/// Opens the source repository in the user's default browser.
+#[tauri::command]
+pub fn open_source_site(state: State<'_, AppState>) -> CommandResult<()> {
+    state.open_source_site().map_err(|error| error.to_string())
+}
