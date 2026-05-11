@@ -165,3 +165,4 @@ There is no dedicated automated test suite. For most changes:
 4. For frontend changes, run `cd frontend; npm.cmd run build`.
 5. For Rust changes, run `cargo fmt` and `cargo build`.
 6. For release/config changes, review `.github/workflows/release-desktop.yml`, `tauri.conf.json`, `capabilities/default.json`, and `build.rs`.
+
