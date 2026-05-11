@@ -133,6 +133,9 @@ pub struct AppSettings {
     /// Whether microphone source is enabled.
     #[serde(default = "default_enabled", alias = "microphone_enabled")]
     pub microphone_enabled: bool,
+    /// Whether the main window should stay above other windows.
+    #[serde(default, alias = "always_on_top")]
+    pub always_on_top: bool,
     /// Active transcript id.
     #[serde(default, alias = "active_transcript_id")]
     pub active_transcript_id: String,

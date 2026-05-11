@@ -11,9 +11,11 @@ namespace TranscriptApp {
     appState: null,
     interimText: "",
   };
+  let compactMode = false;
 
   document.addEventListener("DOMContentLoaded", async () => {
     bindEvents();
+    renderWindowModeButtons();
     await bindBackendEvents();
     await refreshState();
   });
@@ -30,6 +32,19 @@ namespace TranscriptApp {
 
     refs.sourceLink.addEventListener("click", () => {
       void safeInvoke("open_source_site");
+    });
+
+    refs.compactButton.addEventListener("click", () => {
+      compactMode = !compactMode;
+      renderWindowModeButtons();
+    });
+
+    refs.alwaysOnTopButton.addEventListener("click", async () => {
+      const enabled = !model.appState?.settings.alwaysOnTop;
+      const state = await safeInvoke<AppViewState>("set_always_on_top", {
+        enabled,
+      });
+      if (state) TranscriptRender.renderState(refs, model, state);
     });
 
     refs.testButton.addEventListener("click", async () => {
@@ -164,5 +179,10 @@ namespace TranscriptApp {
       settings: TranscriptRender.collectSettings(refs),
     });
     if (state) TranscriptRender.renderState(refs, model, state);
+  }
+
+  function renderWindowModeButtons(): void {
+    document.body.classList.toggle("is-compact", compactMode);
+    refs.compactButton.textContent = compactMode ? "Full" : "Compact";
   }
 }

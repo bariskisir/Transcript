@@ -15,6 +15,7 @@ namespace TranscriptRender {
       language: refs.languageSelect.value,
       speakerEnabled: refs.speakerToggle.classList.contains("is-on"),
       microphoneEnabled: refs.microphoneToggle.classList.contains("is-on"),
+      alwaysOnTop: refs.alwaysOnTopButton.classList.contains("is-active"),
     };
   }
 
@@ -101,6 +102,15 @@ namespace TranscriptRender {
     refs.microphoneSelect.disabled = running;
     refs.apiKeyInput.disabled = running;
     refs.testButton.disabled = running || !refs.apiKeyInput.value.trim();
+    refs.alwaysOnTopButton.disabled = running;
+    refs.alwaysOnTopButton.classList.toggle(
+      "is-active",
+      Boolean(model.appState.settings.alwaysOnTop)
+    );
+    refs.alwaysOnTopButton.setAttribute(
+      "aria-pressed",
+      String(Boolean(model.appState.settings.alwaysOnTop))
+    );
     refs.copyButton.disabled =
       !refs.transcriptText.textContent?.trim() ||
       refs.transcriptText.classList.contains("ct-empty");

@@ -84,6 +84,7 @@ impl AppState {
         inner.settings.language = input.language;
         inner.settings.speaker_enabled = input.speaker_enabled;
         inner.settings.microphone_enabled = input.microphone_enabled;
+        inner.settings.always_on_top = input.always_on_top;
         inner.settings.active_transcript_id = inner.active_transcript_id.clone();
         if inner.capture.is_running() {
             let settings = inner.settings.clone();
@@ -199,6 +200,14 @@ impl AppState {
     pub fn stop_capture(&self) -> Result<AppViewState> {
         let mut inner = self.lock()?;
         inner.stop_capture();
+        Ok(inner.build_view())
+    }
+
+    /// Persists the always-on-top preference.
+    pub fn set_always_on_top(&self, enabled: bool) -> Result<AppViewState> {
+        let mut inner = self.lock()?;
+        inner.settings.always_on_top = enabled;
+        inner.storage.save_settings(&inner.settings)?;
         Ok(inner.build_view())
     }
 

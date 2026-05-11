@@ -4,25 +4,24 @@
 
 :root {
   color-scheme: dark;
-  --bg-deep: #0b1120;
-  --bg-base: #0f172a;
-  --bg-surface: rgba(30, 41, 59, 0.65);
-  --bg-elevated: rgba(51, 65, 85, 0.45);
-  --bg-input: rgba(15, 23, 42, 0.8);
-  --text: #f1f5f9;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
-  --border: rgba(148, 163, 184, 0.12);
-  --border-focus: rgba(20, 184, 166, 0.5);
-  --primary: #14b8a6;
-  --primary-hover: #0d9488;
-  --primary-glow: rgba(20, 184, 166, 0.2);
-  --danger: #f43f5e;
-  --danger-hover: #e11d48;
-  --danger-glow: rgba(244, 63, 94, 0.15);
+  --bg-deep: #101113;
+  --bg-base: #181a1d;
+  --bg-surface: #181a1d;
+  --bg-elevated: #202327;
+  --bg-input: #111315;
+  --text: #f3f0ea;
+  --text-secondary: #9d9a92;
+  --text-muted: #6f716c;
+  --border: rgba(232, 222, 205, 0.12);
+  --border-focus: rgba(22, 160, 133, 0.72);
+  --primary: #16a085;
+  --primary-hover: #0f7d6d;
+  --primary-glow: rgba(22, 160, 133, 0.18);
+  --danger: #e25563;
+  --danger-hover: #cc4452;
+  --danger-glow: rgba(226, 85, 99, 0.15);
   --success: #10b981;
   --radius: 8px;
-  --radius-lg: 12px;
   --transition: 180ms ease;
 }
 
@@ -55,7 +54,7 @@ html, body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: linear-gradient(165deg, var(--bg-deep) 0%, var(--bg-base) 50%, #111827 100%);
+  background: var(--bg-deep);
 }
 
 /* ── Status Bar ────────────────────────────────────────────────── */
@@ -68,16 +67,15 @@ html, body {
   padding: 5px 12px;
   border-bottom: 1px solid var(--border);
   color: var(--text-secondary);
-  background: rgba(15, 23, 42, 0.5);
-  backdrop-filter: blur(12px);
+  background: #151719;
   font-size: 11px;
   font-weight: 500;
   transition: color var(--transition), background var(--transition);
 }
 
 .ct-status-row.is-error {
-  color: #fda4af;
-  background: rgba(244, 63, 94, 0.08);
+  color: #ff9aa4;
+  background: #151719;
 }
 
 /* ── Controls Panel ────────────────────────────────────────────── */
@@ -91,12 +89,12 @@ html, body {
   padding: 10px 12px;
   border-bottom: 1px solid var(--border);
   background: var(--bg-surface);
-  backdrop-filter: blur(16px);
 }
 
 .ct-nav-row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
   min-width: 0;
 }
@@ -198,7 +196,6 @@ option {
 input:focus, select:focus {
   outline: none;
   border-color: var(--border-focus);
-  box-shadow: 0 0 0 3px var(--primary-glow);
 }
 
 input::placeholder {
@@ -239,9 +236,20 @@ input::placeholder {
 .mini-button:hover:not(:disabled),
 .ct-session-actions button:hover:not(:disabled) {
   color: var(--primary);
-  border-color: rgba(20, 184, 166, 0.3);
-  background: rgba(20, 184, 166, 0.08);
-  box-shadow: 0 0 8px var(--primary-glow);
+  border-color: rgba(22, 160, 133, 0.6);
+}
+
+.mini-button.is-active {
+  border-color: rgba(22, 160, 133, 0.75);
+  background: var(--primary);
+  color: #fff;
+  opacity: 1;
+}
+
+.mini-button.is-active:hover:not(:disabled) {
+  border-color: var(--primary-hover);
+  background: var(--primary-hover);
+  color: #fff;
 }
 
 /* ── Copy Button ───────────────────────────────────────────────── */
@@ -253,10 +261,8 @@ input::placeholder {
 
 .ct-copy-button.is-copied {
   border-color: rgba(16, 185, 129, 0.5);
-  background: rgba(16, 185, 129, 0.1);
-  color: var(--success);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15);
+  background: var(--primary);
+  color: #fff;
 }
 
 /* ── Delete Button ─────────────────────────────────────────────── */
@@ -270,7 +276,6 @@ input::placeholder {
   border-color: rgba(244, 63, 94, 0.4) !important;
   background: var(--danger-glow) !important;
   color: var(--danger) !important;
-  box-shadow: 0 0 8px var(--danger-glow) !important;
 }
 
 /* ── Primary Button (Start) ────────────────────────────────────── */
@@ -279,16 +284,13 @@ input::placeholder {
   width: 56px;
   min-width: 56px;
   border-color: var(--primary) !important;
-  background: linear-gradient(135deg, var(--primary), var(--primary-hover)) !important;
+  background: var(--primary) !important;
   color: #fff !important;
   font-weight: 700;
-  box-shadow: 0 2px 10px var(--primary-glow);
 }
 
 .ct-primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, var(--primary-hover), #0f766e) !important;
-  box-shadow: 0 4px 16px rgba(20, 184, 166, 0.35) !important;
-  transform: translateY(-1px);
+  background: var(--primary-hover) !important;
 }
 
 /* ── Stop Button ───────────────────────────────────────────────── */
@@ -297,17 +299,14 @@ input::placeholder {
   width: 56px;
   min-width: 56px;
   border-color: var(--danger);
-  background: linear-gradient(135deg, var(--danger), var(--danger-hover));
+  background: var(--danger);
   color: #fff;
   font-weight: 700;
-  box-shadow: 0 2px 10px var(--danger-glow);
   transition: all var(--transition);
 }
 
 #stopButton:hover:not(:disabled) {
-  background: linear-gradient(135deg, var(--danger-hover), #be123c);
-  box-shadow: 0 4px 16px rgba(244, 63, 94, 0.3);
-  transform: translateY(-1px);
+  background: var(--danger-hover);
 }
 
 /* ── Disabled State ────────────────────────────────────────────── */
@@ -329,9 +328,9 @@ input:disabled {
   padding: 0;
   border: 0;
   border-radius: 999px;
-  background: rgba(100, 116, 139, 0.4);
+  background: #4c5050;
   cursor: pointer;
-  transition: background var(--transition), box-shadow var(--transition);
+  transition: background var(--transition);
 }
 
 .ct-switch span {
@@ -347,12 +346,22 @@ input:disabled {
 
 .ct-switch.is-on {
   background: var(--primary);
-  box-shadow: 0 0 10px var(--primary-glow);
 }
 
 .ct-switch.is-on span {
   transform: translateX(16px);
   background: #fff;
+}
+
+body.is-compact .ct-api-row,
+body.is-compact .ct-source-row,
+body.is-compact .app-footer {
+  display: none;
+}
+
+body.is-compact .ct-controls {
+  gap: 0;
+  padding: 8px 12px;
 }
 
 /* ── Session Actions ───────────────────────────────────────────── */
@@ -425,8 +434,7 @@ input:disabled {
   padding: 7px 14px 9px;
   border-top: 1px solid var(--border);
   color: var(--text-muted);
-  background: rgba(15, 23, 42, 0.35);
-  backdrop-filter: blur(12px);
+  background: #151719;
 }
 
 .footer-link {

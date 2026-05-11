@@ -7,6 +7,7 @@ interface AppSettings {
   language: string;
   speakerEnabled: boolean;
   microphoneEnabled: boolean;
+  alwaysOnTop: boolean;
   activeTranscriptId: string;
 }
 
@@ -49,6 +50,7 @@ interface FrontendSettings {
   language: string;
   speakerEnabled: boolean;
   microphoneEnabled: boolean;
+  alwaysOnTop: boolean;
 }
 
 interface SelectOption {

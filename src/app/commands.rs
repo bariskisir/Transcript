@@ -5,7 +5,7 @@
 
 use super::state::AppState;
 use super::view::{AppViewState, FrontendSettings};
-use tauri::State;
+use tauri::{AppHandle, Manager, State};
 
 /// Shorthand for Tauri command results.
 type CommandResult<T> = std::result::Result<T, String>;
@@ -100,4 +100,23 @@ pub fn open_developer_site(state: State<'_, AppState>) -> CommandResult<()> {
 #[tauri::command]
 pub fn open_source_site(state: State<'_, AppState>) -> CommandResult<()> {
     state.open_source_site().map_err(|error| error.to_string())
+}
+
+/// Toggles whether the main app window stays above other windows.
+#[tauri::command]
+pub fn set_always_on_top(
+    enabled: bool,
+    state: State<'_, AppState>,
+    app_handle: AppHandle,
+) -> CommandResult<AppViewState> {
+    let view = state
+        .set_always_on_top(enabled)
+        .map_err(|error| error.to_string())?;
+    let window = app_handle
+        .get_webview_window("main")
+        .ok_or_else(|| "Main window was not found.".to_owned())?;
+    window
+        .set_always_on_top(enabled)
+        .map_err(|error| error.to_string())?;
+    Ok(view)
 }

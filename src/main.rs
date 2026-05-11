@@ -10,10 +10,11 @@ use anyhow::Result;
 use app::{
     AppState, create_transcript, delete_transcript, get_app_state, open_deepgram_site,
     open_developer_site, open_source_site, refresh_devices, save_settings,
-    select_transcript_by_offset, spawn_event_forwarder, start_capture, stop_capture,
-    test_deepgram_key,
+    select_transcript_by_offset, set_always_on_top, spawn_event_forwarder, start_capture,
+    stop_capture, test_deepgram_key,
 };
 use infra::paths::app_paths;
+use tauri::Manager;
 
 /// Configures logging, persistence, and launches the Tauri window.
 fn main() -> Result<()> {
@@ -29,6 +30,15 @@ fn main() -> Result<()> {
     tauri::Builder::default()
         .manage(managed_state)
         .setup(move |app| {
+            let app_version = app.package_info().version.to_string();
+            if let Some(window) = app.get_webview_window("main") {
+                window.set_title(&format!("Transcript - v{app_version}"))?;
+                if let Ok(view) = state.view_state()
+                    && let Err(error) = window.set_always_on_top(view.settings.always_on_top)
+                {
+                    log::warn!("Could not apply always-on-top setting: {error}");
+                }
+            }
             spawn_event_forwarder(app.handle().clone(), state.clone(), events_rx);
             Ok(())
         })
@@ -44,7 +54,8 @@ fn main() -> Result<()> {
             refresh_devices,
             open_deepgram_site,
             open_developer_site,
-            open_source_site
+            open_source_site,
+            set_always_on_top
         ])
         .run(tauri::generate_context!())
         .map_err(|error| anyhow::anyhow!(error.to_string()))?;

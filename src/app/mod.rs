@@ -9,8 +9,8 @@ mod view;
 
 pub use commands::{
     create_transcript, delete_transcript, get_app_state, open_deepgram_site, open_developer_site,
-    open_source_site, refresh_devices, save_settings, select_transcript_by_offset, start_capture,
-    stop_capture, test_deepgram_key,
+    open_source_site, refresh_devices, save_settings, select_transcript_by_offset,
+    set_always_on_top, start_capture, stop_capture, test_deepgram_key,
 };
 pub use events::spawn_event_forwarder;
 pub use state::AppState;

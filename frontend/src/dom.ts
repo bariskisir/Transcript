@@ -14,6 +14,8 @@ namespace TranscriptDom {
     speakerSelect: HTMLSelectElement;
     microphoneSelect: HTMLSelectElement;
     languageSelect: HTMLSelectElement;
+    compactButton: HTMLButtonElement;
+    alwaysOnTopButton: HTMLButtonElement;
     previousButton: HTMLButtonElement;
     nextButton: HTMLButtonElement;
     newButton: HTMLButtonElement;
@@ -40,6 +42,8 @@ namespace TranscriptDom {
       speakerSelect: requireElement<HTMLSelectElement>("speakerSelect"),
       microphoneSelect: requireElement<HTMLSelectElement>("microphoneSelect"),
       languageSelect: requireElement<HTMLSelectElement>("languageSelect"),
+      compactButton: requireElement<HTMLButtonElement>("compactButton"),
+      alwaysOnTopButton: requireElement<HTMLButtonElement>("alwaysOnTopButton"),
       previousButton: requireElement<HTMLButtonElement>("previousButton"),
       nextButton: requireElement<HTMLButtonElement>("nextButton"),
       newButton: requireElement<HTMLButtonElement>("newButton"),

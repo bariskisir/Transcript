@@ -58,4 +58,6 @@ pub struct FrontendSettings {
     pub speaker_enabled: bool,
     /// Whether microphone source is enabled.
     pub microphone_enabled: bool,
+    /// Whether the main window should stay above other windows.
+    pub always_on_top: bool,
 }
