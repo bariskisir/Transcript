@@ -18,30 +18,8 @@ env:
 
 jobs:
   build:
-    name: Build ${{ matrix.label }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - label: windows
-            os: windows-latest
-            artifact_name: transcript-windows
-            artifact_path: |
-              target/release/bundle/msi/*.msi
-              target/release/bundle/nsis/*setup.exe
-          - label: linux
-            os: ubuntu-22.04
-            artifact_name: transcript-linux
-            artifact_path: |
-              target/release/bundle/appimage/*.AppImage
-              target/release/bundle/deb/*.deb
-              target/release/bundle/rpm/*.rpm
-          - label: macos
-            os: macos-latest
-            artifact_name: transcript-macos
-            artifact_path: |
-              target/release/bundle/dmg/*.dmg
+    name: Build Windows x64 Setup
+    runs-on: windows-latest
 
     steps:
       - name: Checkout release ref
@@ -60,23 +38,6 @@ jobs:
       - name: Cache Rust builds
         uses: swatinem/rust-cache@v2
 
-      - name: Install Linux dependencies
-        if: matrix.label == 'linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            build-essential \
-            curl \
-            file \
-            libasound2-dev \
-            libayatana-appindicator3-dev \
-            libssl-dev \
-            libwebkit2gtk-4.1-dev \
-            libxdo-dev \
-            librsvg2-dev \
-            pkg-config \
-            wget
-
       - name: Install frontend dependencies
         run: npm ci
         working-directory: frontend
@@ -90,8 +51,8 @@ jobs:
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact_name }}
-          path: ${{ matrix.artifact_path }}
+          name: transcript-windows-x64-setup
+          path: target/release/bundle/nsis/*_x64-setup.exe
           if-no-files-found: error
 
   publish:
@@ -115,6 +76,6 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           name: Transcript ${{ github.ref_name }}
-          files: release-assets/**/*
+          files: release-assets/**/*_x64-setup.exe
           fail_on_unmatched_files: true
           generate_release_notes: true
