@@ -2,6 +2,8 @@
 
 Transcript is a minimal desktop application that captures speaker and microphone audio and transcribes speech in real time using [Deepgram](https://deepgram.com).
 
+Chrome Extension -> https://github.com/bariskisir/ChromeTranscript
+
 ![Transcript interface](images/interface.png)
 
 ---
