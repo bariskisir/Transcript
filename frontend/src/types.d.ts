@@ -1,6 +1,6 @@
 /** Shared type definitions mirroring Rust backend view models. */
 
-interface AppSettings {
+export interface AppSettings {
   apiKey: string;
   speakerDeviceId: string;
   microphoneDeviceId: string;
@@ -11,12 +11,12 @@ interface AppSettings {
   activeTranscriptId: string;
 }
 
-interface TranscriptSummary {
+export interface TranscriptSummary {
   id: string;
   label: string;
 }
 
-interface AudioDevice {
+export interface AudioDevice {
   id: string;
   name: string;
   kind: "Speaker" | "Microphone";
@@ -24,13 +24,13 @@ interface AudioDevice {
   isAvailable: boolean;
 }
 
-interface LanguageOption {
+export interface LanguageOption {
   value: string;
   label: string;
   model: string | null;
 }
 
-interface AppViewState {
+export interface AppViewState {
   settings: AppSettings;
   balance: string;
   status: string;
@@ -44,7 +44,7 @@ interface AppViewState {
   running: boolean;
 }
 
-interface FrontendSettings {
+export interface FrontendSettings {
   speakerDeviceId: string;
   microphoneDeviceId: string;
   language: string;
@@ -53,13 +53,13 @@ interface FrontendSettings {
   alwaysOnTop: boolean;
 }
 
-interface SelectOption {
+export interface SelectOption {
   value: string;
   label: string;
   title?: string;
 }
 
-type UiEventPayload =
+export type UiEventPayload =
   | { type: "status"; message: string }
   | { type: "interim"; text: string }
   | { type: "state"; state: AppViewState }

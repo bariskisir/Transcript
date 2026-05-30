@@ -235,10 +235,6 @@ var TranscriptRender;
         return state.transcriptCount === 1 && !state.transcriptText.trim();
     }
 })(TranscriptRender || (TranscriptRender = {}));
-/// <reference path="./types.d.ts" />
-/// <reference path="./dom.ts" />
-/// <reference path="./backend.ts" />
-/// <reference path="./render.ts" />
 /** Tauri frontend for live transcription controls and transcript rendering. */
 var TranscriptApp;
 (function (TranscriptApp) {
