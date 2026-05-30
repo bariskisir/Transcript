@@ -4,8 +4,8 @@
   "version": "1.0.8",
   "identifier": "com.bariskisir.transcript",
   "build": {
-    "beforeDevCommand": "npm --prefix frontend run watch",
-    "beforeBuildCommand": "npm --prefix frontend run build",
+    "beforeDevCommand": "npm run watch",
+    "beforeBuildCommand": "npm run build",
     "frontendDist": "frontend/dist"
   },
   "app": {
