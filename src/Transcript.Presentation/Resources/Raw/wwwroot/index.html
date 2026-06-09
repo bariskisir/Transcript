@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Transcript</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main id="ct-app" class="ct-shell">
+      <header id="statusRow" class="ct-status-row">
+        <span id="statusText">Ready.</span>
+      </header>
+
+      <section class="ct-controls">
+        <div class="ct-api-row">
+          <button id="deepgramLink" class="ct-api-link" type="button" title="Open Deepgram Console">Deepgram API</button>
+          <input id="apiKeyInput" type="text" autocomplete="off" spellcheck="false" placeholder="Enter API key..." aria-label="Deepgram API key">
+          <button id="testButton" class="mini-button" type="button">Test &amp; Save</button>
+        </div>
+
+        <div class="ct-source-row">
+          <button id="speakerToggle" class="ct-switch" type="button" aria-pressed="true"><span></span></button>
+          <label for="speakerSelect">Speaker</label>
+          <select id="speakerSelect" title="Speaker" aria-label="Speaker"></select>
+        </div>
+
+        <div class="ct-source-row">
+          <button id="microphoneToggle" class="ct-switch" type="button" aria-pressed="true"><span></span></button>
+          <label for="microphoneSelect">Mic</label>
+          <select id="microphoneSelect" title="Microphone" aria-label="Microphone"></select>
+        </div>
+
+        <div class="ct-nav-row">
+          <button id="compactButton" class="mini-button" type="button">Compact</button>
+          <button id="previousButton" class="ct-icon-button" type="button" title="Previous transcript" aria-label="Previous transcript">&lt;</button>
+          <span id="transcriptCounter" class="ct-counter">0/0</span>
+          <button id="nextButton" class="ct-icon-button" type="button" title="Next transcript" aria-label="Next transcript">&gt;</button>
+          <button id="newButton" class="ct-icon-button" type="button" title="New transcript" aria-label="New transcript">+</button>
+          <button id="deleteButton" class="ct-icon-button ct-delete-button" type="button" title="Delete transcript" aria-label="Delete transcript">x</button>
+          <button id="copyButton" class="mini-button ct-copy-button" type="button">copy</button>
+          <select id="languageSelect" title="Language" aria-label="Language"></select>
+          <div class="ct-session-actions">
+            <button id="startButton" class="ct-primary" type="button">Start</button>
+            <button id="stopButton" type="button" hidden>Stop</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="ct-body">
+        <textarea id="transcriptText" class="ct-transcript" spellcheck="true" placeholder="No transcript yet."></textarea>
+      </section>
+
+      <footer class="app-footer">
+        <button id="developerLink" class="footer-link" type="button">Developed by Barış Kısır</button>
+        <button id="sourceLink" class="footer-link" type="button">Source</button>
+      </footer>
+    </main>
+    <script src="app.js"></script>
+  </body>
+</html>

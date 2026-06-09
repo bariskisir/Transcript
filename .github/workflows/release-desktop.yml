@@ -13,46 +13,61 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  CARGO_TERM_COLOR: always
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
 
 jobs:
   build:
-    name: Build Windows x64 Setup
+    name: Build Windows x64 Package
     runs-on: windows-latest
 
     steps:
       - name: Checkout release ref
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
         with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          dotnet-version: 10.0.300
 
-      - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
+      - name: Install Windows MAUI workload
+        run: dotnet workload install maui-windows --skip-manifest-update
 
-      - name: Cache Rust builds
-        uses: swatinem/rust-cache@v2
+      - name: Restore solution
+        run: dotnet restore src/Transcript.slnx
 
-      - name: Install frontend dependencies
-        run: npm ci
-        working-directory: frontend
+      - name: Run tests
+        run: dotnet test src/Transcript.Tests/Transcript.Tests.csproj --configuration Release --no-restore
 
-      - name: Install Tauri CLI
-        run: cargo install tauri-cli --version "^2" --locked
+      - name: Publish Windows desktop app
+        run: >
+          dotnet publish src/Transcript.Presentation/Transcript.Presentation.csproj
+          --configuration Release
+          --framework net10.0-windows10.0.19041.0
+          --runtime win-x64
+          --self-contained true
+          -p:WindowsPackageType=None
+          -p:PublishSingleFile=false
+          -p:PublishTrimmed=false
+          --output artifacts/transcript-windows-x64
 
-      - name: Build desktop package
-        run: cargo tauri build
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+
+      - name: Build Windows setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path release-assets | Out-Null
+          $version = "${{ github.ref_name }}" -replace '^[vV]', ''
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" installer\windows\transcript.iss /DAppVersion=$version /DSourceDir="$PWD\artifacts\transcript-windows-x64" /DOutputDir="$PWD\release-assets"
+          Get-ChildItem release-assets -Filter *.exe | Select-Object -ExpandProperty FullName
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: transcript-windows-x64-setup
-          path: target/release/bundle/nsis/*_x64-setup.exe
+          name: transcript-${{ github.ref_name }}-windows-x64-setup
+          path: release-assets/*.exe
           if-no-files-found: error
 
   publish:
@@ -69,13 +84,13 @@ jobs:
 
       - name: List release assets
         shell: bash
-        run: find release-assets -type f -maxdepth 5 -print
+        run: find release-assets -maxdepth 5 -type f -print
 
       - name: Publish release assets
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: Transcript ${{ github.ref_name }}
-          files: release-assets/**/*_x64-setup.exe
+          files: release-assets/*.exe
           fail_on_unmatched_files: true
           generate_release_notes: true
