@@ -232,13 +232,23 @@
     refs.transcriptCounter.textContent = `${index}/${count}`;
   }
 
+  function isNearBottom(element) {
+    return element.scrollHeight - element.scrollTop - element.clientHeight <= 32;
+  }
+
+  function scrollToBottom(element) {
+    element.scrollTop = element.scrollHeight;
+  }
+
   function renderTranscript() {
+    const stick = isNearBottom(refs.transcriptText);
     const parts = [];
     if (model.state && model.state.transcriptText) parts.push(model.state.transcriptText.trim());
     if (model.interimText) parts.push(model.interimText.trim());
     const text = parts.filter(Boolean).join(" ");
     refs.transcriptText.value = text;
     refs.transcriptText.classList.toggle("is-empty", !text);
+    if (stick) scrollToBottom(refs.transcriptText);
   }
 
   function updateButtons() {
