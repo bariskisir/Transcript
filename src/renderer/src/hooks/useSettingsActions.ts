@@ -31,13 +31,15 @@ export const useSettingsActions = () => {
         document.documentElement.lang = saved.uiLanguage
         await i18n.changeLanguage(saved.uiLanguage)
         if (
-          (patch.translationTargetLanguage !== undefined ||
+          (patch.translationEnabled !== undefined ||
+            patch.translationTargetLanguage !== undefined ||
             patch.translationProvider !== undefined) &&
           currentTranscriptId
         ) {
           try {
             await window.transcript.translateTranscript(
               currentTranscriptId,
+              saved.translationEnabled,
               saved.translationProvider,
               saved.translationTargetLanguage,
             )

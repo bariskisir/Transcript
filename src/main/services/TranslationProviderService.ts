@@ -19,7 +19,7 @@ export default class TranslationProviderService {
     provider: TranslationProvider,
     sentence: string,
     sourceLanguage: string,
-    targetLanguage: Exclude<TranslationTargetLanguage, 'none'>,
+    targetLanguage: TranslationTargetLanguage,
   ): Promise<string> {
     if (provider === 'bing') return this.bing.translate(sentence, sourceLanguage, targetLanguage)
     return this.google.translate(sentence, sourceLanguage, targetLanguage)

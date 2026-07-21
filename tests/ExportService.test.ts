@@ -65,11 +65,18 @@ describe('renderTranscript', () => {
       ],
     }
 
-    const result = renderTranscript(translated, 'txt', 'bing', 'tr')
+    const result = renderTranscript(translated, 'txt', true, 'bing', 'tr')
 
     expect(result).toContain('Translation (tr)')
     expect(result).toContain('Hoş geldiniz. Teşekkürler.')
-    expect(renderTranscript(translated, 'txt', 'bing', 'de')).not.toContain('Translation (de)')
-    expect(renderTranscript(translated, 'txt', 'google', 'tr')).not.toContain('Translation (tr)')
+    expect(renderTranscript(translated, 'txt', true, 'bing', 'de')).not.toContain(
+      'Translation (de)',
+    )
+    expect(renderTranscript(translated, 'txt', true, 'google', 'tr')).not.toContain(
+      'Translation (tr)',
+    )
+    expect(renderTranscript(translated, 'txt', false, 'bing', 'tr')).not.toContain(
+      'Translation (tr)',
+    )
   })
 })

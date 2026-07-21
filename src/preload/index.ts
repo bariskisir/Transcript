@@ -49,15 +49,16 @@ const api: TranscriptApi = {
   /** Deletes one local transcript. */
   deleteTranscript: (id) => ipcRenderer.invoke(IpcChannel.TranscriptDelete, id),
   /** Changes the provider/target and schedules existing transcript text for translation. */
-  translateTranscript: (id, provider, targetLanguage) =>
-    ipcRenderer.invoke(IpcChannel.TranscriptTranslate, id, provider, targetLanguage),
+  translateTranscript: (id, enabled, provider, targetLanguage) =>
+    ipcRenderer.invoke(IpcChannel.TranscriptTranslate, id, enabled, provider, targetLanguage),
   /** Opens a native dialog and exports one transcript. */
-  exportTranscript: (id, format, dialogTitle, provider, targetLanguage) =>
+  exportTranscript: (id, format, dialogTitle, includeTranslation, provider, targetLanguage) =>
     ipcRenderer.invoke(
       IpcChannel.TranscriptExport,
       id,
       format,
       dialogTitle,
+      includeTranslation,
       provider,
       targetLanguage,
     ),

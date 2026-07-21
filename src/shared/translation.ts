@@ -2,7 +2,7 @@
  * Defines translation providers and target languages in preferred display order.
  */
 
-export const ACTIVE_TRANSLATION_TARGET_LANGUAGES = [
+export const TRANSLATION_TARGET_LANGUAGES = [
   'tr',
   'en',
   'ar',
@@ -17,11 +17,6 @@ export const ACTIVE_TRANSLATION_TARGET_LANGUAGES = [
   'ko',
   'th',
   'vi',
-] as const
-
-export const TRANSLATION_TARGET_LANGUAGES = [
-  'none',
-  ...ACTIVE_TRANSLATION_TARGET_LANGUAGES,
 ] as const
 
 export const TRANSLATION_PROVIDERS = ['google', 'bing'] as const

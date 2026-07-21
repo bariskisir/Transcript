@@ -17,8 +17,9 @@ const formatTimestamp = (offsetMs: number): string => {
 export const renderTranscript = (
   transcript: TranscriptDocument,
   format: TranscriptFormat,
+  includeTranslation = false,
   provider: TranslationProvider = 'google',
-  targetLanguage: TranslationTargetLanguage = 'none',
+  targetLanguage: TranslationTargetLanguage = 'tr',
 ): string => {
   if (format === 'json') return `${JSON.stringify(transcript, null, 2)}\n`
   const lines = transcript.segments.map((segment) => {
@@ -26,7 +27,7 @@ export const renderTranscript = (
     return `[${formatTimestamp(segment.offsetMs)}] ${source}: ${segment.text}`
   })
   const source = `${transcript.title}\n${'='.repeat(transcript.title.length)}\n\n${lines.join('\n')}\n`
-  if (targetLanguage === 'none') return source
+  if (!includeTranslation) return source
 
   const translatedText = [...transcript.translations]
     .filter(

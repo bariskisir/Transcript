@@ -15,7 +15,7 @@ import {
   type TranscriptSummary,
   type TranslationSegment,
 } from '@shared/types'
-import { ACTIVE_TRANSLATION_TARGET_LANGUAGES, TRANSLATION_PROVIDERS } from '@shared/translation'
+import { TRANSLATION_PROVIDERS, TRANSLATION_TARGET_LANGUAGES } from '@shared/translation'
 import { z } from 'zod'
 import { parsePersistedSettings, settingsSchema } from '../settingsSchema'
 
@@ -35,7 +35,7 @@ const translationSchema = z
     sourceText: z.string().trim().min(1).max(20_000),
     text: z.string().trim().min(1).max(20_000),
     sourceLanguage: z.string().trim().min(1).max(24),
-    targetLanguage: z.enum(ACTIVE_TRANSLATION_TARGET_LANGUAGES),
+    targetLanguage: z.enum(TRANSLATION_TARGET_LANGUAGES),
     sourceSegmentIds: z.array(z.uuid()).min(1).max(200),
     sourceStartIndex: z.number().int().nonnegative(),
     sourceEndIndex: z.number().int().positive(),

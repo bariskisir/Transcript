@@ -33,7 +33,7 @@ export default class BingTranslateService {
   public async translate(
     sentence: string,
     sourceLanguage: string,
-    targetLanguage: Exclude<TranslationTargetLanguage, 'none'>,
+    targetLanguage: TranslationTargetLanguage,
   ): Promise<string> {
     const text = sentence.trim()
     if (!text) return ''

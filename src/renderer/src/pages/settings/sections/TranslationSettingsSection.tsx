@@ -3,11 +3,11 @@
  */
 
 import { useMemo } from 'react'
-import { Select } from 'antd'
+import { Select, Switch } from 'antd'
 import { useTranslation } from 'react-i18next'
 import {
-  ACTIVE_TRANSLATION_TARGET_LANGUAGES,
   TRANSLATION_PROVIDERS,
+  TRANSLATION_TARGET_LANGUAGES,
   type TranslationProvider,
   type TranslationTargetLanguage,
 } from '@shared/translation'
@@ -26,13 +26,10 @@ const TranslationSettingsSection = (): React.JSX.Element => {
     () => new Intl.DisplayNames([settings.uiLanguage, 'en'], { type: 'language' }),
     [settings.uiLanguage],
   )
-  const targetOptions = [
-    { value: 'none' as const, label: t('controls.translationNone') },
-    ...ACTIVE_TRANSLATION_TARGET_LANGUAGES.map((language) => ({
-      value: language,
-      label: languageNames.of(language) ?? language,
-    })),
-  ]
+  const targetOptions = TRANSLATION_TARGET_LANGUAGES.map((language) => ({
+    value: language,
+    label: languageNames.of(language) ?? language,
+  }))
 
   return (
     <div className={styles.settingContainer}>
@@ -67,10 +64,19 @@ const TranslationSettingsSection = (): React.JSX.Element => {
             description={t('settings.translateToDescription')}
           />
           <div className={styles.settingControl}>
+            <Switch
+              checked={settings.translationEnabled}
+              disabled={session === 'connecting' || session === 'stopping'}
+              onChange={(translationEnabled) =>
+                void settingsActions.saveSettings({ translationEnabled })
+              }
+            />
             <Select<TranslationTargetLanguage>
               className={styles.wideControl ?? ''}
               value={settings.translationTargetLanguage}
-              disabled={session === 'connecting' || session === 'stopping'}
+              disabled={
+                !settings.translationEnabled || session === 'connecting' || session === 'stopping'
+              }
               showSearch
               optionFilterProp="label"
               options={targetOptions}

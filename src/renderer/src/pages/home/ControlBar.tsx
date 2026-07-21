@@ -7,10 +7,7 @@ import { Button, Select, Switch, Tooltip } from 'antd'
 import { Languages, Mic2, MonitorSpeaker, Radio, Square } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { getDeepgramModel } from '@shared/deepgram'
-import {
-  ACTIVE_TRANSLATION_TARGET_LANGUAGES,
-  type TranslationTargetLanguage,
-} from '@shared/translation'
+import { TRANSLATION_TARGET_LANGUAGES, type TranslationTargetLanguage } from '@shared/translation'
 import type { AppSettingsPatch } from '@shared/types'
 import type AudioCaptureService from '@renderer/audio/AudioCaptureService'
 import type { AudioDevice } from '@renderer/audio/AudioCaptureService'
@@ -171,27 +168,33 @@ const ControlBar = ({
         />
       </div>
 
-      <div className={`${styles.sourceBlock} ${styles.enabled}`}>
+      <div className={`${styles.sourceBlock} ${settings.translationEnabled ? styles.enabled : ''}`}>
         <div className={styles.sourceHeader}>
           <span className={`${styles.sourceIcon} ${styles.languageTone}`}>
             <Languages size={16} />
           </span>
           <span className={styles.sourceName}>{t('controls.translateTo')}</span>
+          <span className={styles.headerSpacer} />
+          <Switch
+            size="small"
+            checked={settings.translationEnabled}
+            disabled={session === 'connecting' || session === 'stopping'}
+            onChange={(checked) => void update({ translationEnabled: checked })}
+          />
         </div>
         <Select<TranslationTargetLanguage>
           size="small"
           value={settings.translationTargetLanguage}
-          disabled={session === 'connecting' || session === 'stopping'}
+          disabled={
+            !settings.translationEnabled || session === 'connecting' || session === 'stopping'
+          }
           onChange={(translationTargetLanguage) => void update({ translationTargetLanguage })}
           showSearch
           optionFilterProp="label"
-          options={[
-            { value: 'none', label: t('controls.translationNone') },
-            ...ACTIVE_TRANSLATION_TARGET_LANGUAGES.map((language) => ({
-              value: language,
-              label: formatTranslationLanguage(language),
-            })),
-          ]}
+          options={TRANSLATION_TARGET_LANGUAGES.map((language) => ({
+            value: language,
+            label: formatTranslationLanguage(language),
+          }))}
         />
       </div>
 

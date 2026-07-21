@@ -23,7 +23,6 @@ export default {
     speaker: 'Lautsprecher',
     speechLanguage: 'Gesprochene Sprache',
     translateTo: 'Übersetzen nach',
-    translationNone: 'Keine',
     defaultDevice: 'Standardmikrofon',
     defaultSpeaker: 'Standardlautsprecher',
     start: 'Transkript starten',
@@ -111,7 +110,7 @@ export default {
     translationProviders: { google: 'Google Translate', bing: 'Bing Translator' },
     translateTo: 'Übersetzen nach',
     translateToDescription:
-      'Wählen Sie die Zielsprache oder Keine, um die Übersetzung auszuschalten.',
+      'Aktivieren Sie die Übersetzung und wählen Sie die Standardzielsprache.',
     modelVersion: 'Modellversion',
     modelVersionDescription: 'Verwenden Sie latest, sofern Deepgram keine andere Version angibt.',
     vocabulary: 'Vokabularhinweise',

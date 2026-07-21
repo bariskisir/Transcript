@@ -26,13 +26,14 @@ export type LogLevel = (typeof LOG_LEVELS)[number]
 export type DesktopPlatform = 'win32' | 'darwin' | 'linux'
 
 export interface AppSettings {
-  settingsRevision: 5
+  settingsRevision: 1
   uiLanguage: AppLocale
   theme: ThemeMode
   timeFormat: TimeFormat
   transcriptionProvider: TranscriptionProvider
   transcriptionProviderSettings: TranscriptionProviderSettings
   translationProvider: TranslationProvider
+  translationEnabled: boolean
   translationTargetLanguage: TranslationTargetLanguage
   microphoneDeviceId: string
   microphoneEnabled: boolean
@@ -51,7 +52,7 @@ export type AppSettingsPatch = {
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
-  settingsRevision: 5,
+  settingsRevision: 1,
   uiLanguage: 'en',
   theme: 'system',
   timeFormat: '24-hour',
@@ -60,7 +61,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
     deepgram: DEFAULT_DEEPGRAM_TRANSCRIPTION_SETTINGS,
   },
   translationProvider: 'google',
-  translationTargetLanguage: 'none',
+  translationEnabled: false,
+  translationTargetLanguage: 'tr',
   microphoneDeviceId: 'default',
   microphoneEnabled: true,
   speakerDeviceId: 'default',
@@ -85,7 +87,7 @@ export interface TranslationSegment {
   sourceText: string
   text: string
   sourceLanguage: string
-  targetLanguage: Exclude<TranslationTargetLanguage, 'none'>
+  targetLanguage: TranslationTargetLanguage
   sourceSegmentIds: string[]
   sourceStartIndex: number
   sourceEndIndex: number
@@ -218,6 +220,7 @@ export interface TranscriptApi {
   /** Changes a transcript's live provider/target and schedules its existing text for translation. */
   translateTranscript(
     id: string,
+    enabled: boolean,
     provider: TranslationProvider,
     targetLanguage: TranslationTargetLanguage,
   ): Promise<void>
@@ -226,6 +229,7 @@ export interface TranscriptApi {
     id: string,
     format: TranscriptFormat,
     dialogTitle: string,
+    includeTranslation: boolean,
     provider: TranslationProvider,
     targetLanguage: TranslationTargetLanguage,
   ): Promise<boolean>

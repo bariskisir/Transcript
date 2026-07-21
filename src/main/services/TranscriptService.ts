@@ -57,7 +57,8 @@ export default class TranscriptService {
   private sessionSegments: TranscriptSegment[] = []
   private sessionLanguage = ''
   private translationProvider: TranslationProvider = 'google'
-  private translationTarget: TranslationTargetLanguage = 'none'
+  private translationEnabled = false
+  private translationTarget: TranslationTargetLanguage = 'tr'
   private readonly translationCoverage = new Map<string, number>()
   private readonly queuedTranslationKeys = new Set<string>()
   private readonly translationQueues = new Map<string, Promise<void>>()
@@ -126,6 +127,7 @@ export default class TranscriptService {
       this.sessionSegments = [...transcript.segments]
       this.sessionLanguage = providerSettings.language
       this.translationProvider = request.settings.translationProvider
+      this.translationEnabled = request.settings.translationEnabled
       this.translationTarget = request.settings.translationTargetLanguage
       this.initializeTranslationCoverage(transcript)
       this.events.onState({
@@ -140,6 +142,7 @@ export default class TranscriptService {
         model: providerSettings.model,
         language: providerSettings.language,
         translationProvider: request.settings.translationProvider,
+        translationEnabled: request.settings.translationEnabled,
         translationTarget: request.settings.translationTargetLanguage,
       })
       this.schedulePendingTranslations(transcript.id, true)
@@ -166,16 +169,18 @@ export default class TranscriptService {
   /** Changes the target language and translates the selected transcript from its beginning. */
   public async translateTranscript(
     transcriptId: string,
+    enabled: boolean,
     provider: TranslationProvider,
     targetLanguage: TranslationTargetLanguage,
   ): Promise<void> {
     if (this.currentTranscriptId === transcriptId) {
+      this.translationEnabled = enabled
       this.translationProvider = provider
       this.translationTarget = targetLanguage
-      if (targetLanguage !== 'none') this.schedulePendingTranslations(transcriptId, true)
+      if (enabled) this.schedulePendingTranslations(transcriptId, true)
       return
     }
-    if (targetLanguage === 'none') return
+    if (!enabled) return
 
     const transcript = await this.storage.getTranscript(transcriptId)
     this.initializeTranslationCoverage(transcript)
@@ -249,7 +254,8 @@ export default class TranscriptService {
     this.sessionSegments = []
     this.sessionLanguage = ''
     this.translationProvider = 'google'
-    this.translationTarget = 'none'
+    this.translationEnabled = false
+    this.translationTarget = 'tr'
     this.clearPersistenceTimer()
   }
 
@@ -291,7 +297,7 @@ export default class TranscriptService {
 
   /** Enqueues newly completed sentences once for the active language pair. */
   private schedulePendingTranslations(transcriptId: string, includeTrailing: boolean): void {
-    if (this.translationTarget === 'none' || !this.sessionLanguage) return
+    if (!this.translationEnabled || !this.sessionLanguage) return
     this.scheduleTranslations(
       transcriptId,
       this.sessionSegments,
@@ -308,7 +314,7 @@ export default class TranscriptService {
     segments: TranscriptSegment[],
     sourceLanguage: string,
     provider: TranslationProvider,
-    targetLanguage: Exclude<TranslationTargetLanguage, 'none'>,
+    targetLanguage: TranslationTargetLanguage,
     includeTrailing: boolean,
   ): void {
     const pairKey = this.translationPairKey(transcriptId, provider, sourceLanguage, targetLanguage)
@@ -356,7 +362,7 @@ export default class TranscriptService {
     sentence: CompletedTranscriptSentence,
     provider: TranslationProvider,
     sourceLanguage: string,
-    targetLanguage: Exclude<TranslationTargetLanguage, 'none'>,
+    targetLanguage: TranslationTargetLanguage,
   ): Promise<void> {
     try {
       const text = await this.translator.translate(

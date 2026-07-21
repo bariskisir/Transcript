@@ -191,10 +191,17 @@ export const registerIpc = (window: BrowserWindow, services: IpcServices): void 
   })
   ipcMain.handle(
     IpcChannel.TranscriptTranslate,
-    async (event, idInput: unknown, providerInput: unknown, targetInput: unknown) => {
+    async (
+      event,
+      idInput: unknown,
+      enabledInput: unknown,
+      providerInput: unknown,
+      targetInput: unknown,
+    ) => {
       assertSender(event.sender)
       await services.transcript.translateTranscript(
         transcriptIdSchema.parse(idInput),
+        z.boolean().parse(enabledInput),
         translationProviderSchema.parse(providerInput),
         translationTargetSchema.parse(targetInput),
       )
@@ -207,12 +214,14 @@ export const registerIpc = (window: BrowserWindow, services: IpcServices): void 
       idInput: unknown,
       formatInput: unknown,
       dialogTitleInput: unknown,
+      includeTranslationInput: unknown,
       providerInput: unknown,
       targetInput: unknown,
     ) => {
       assertSender(event.sender)
       const format = formatSchema.parse(formatInput)
       const dialogTitle = dialogTitleSchema.parse(dialogTitleInput)
+      const includeTranslation = z.boolean().parse(includeTranslationInput)
       const provider = translationProviderSchema.parse(providerInput)
       const targetLanguage = translationTargetSchema.parse(targetInput)
       const transcript = await services.storage.getTranscript(transcriptIdSchema.parse(idInput))
@@ -224,7 +233,7 @@ export const registerIpc = (window: BrowserWindow, services: IpcServices): void 
       if (result.canceled || !result.filePath) return false
       await writeFile(
         result.filePath,
-        renderTranscript(transcript, format, provider, targetLanguage),
+        renderTranscript(transcript, format, includeTranslation, provider, targetLanguage),
         'utf8',
       )
       return true

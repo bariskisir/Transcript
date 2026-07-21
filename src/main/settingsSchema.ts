@@ -47,13 +47,14 @@ const transcriptionProviderSettingsSchema = z
   .strict()
 
 const settingsFieldsSchema = z.object({
-  settingsRevision: z.literal(5),
+  settingsRevision: z.literal(1),
   uiLanguage: z.enum(APP_LOCALES),
   theme: z.enum(THEME_MODES),
   timeFormat: z.enum(TIME_FORMATS),
   transcriptionProvider: z.enum(TRANSCRIPTION_PROVIDERS),
   transcriptionProviderSettings: transcriptionProviderSettingsSchema,
   translationProvider: z.enum(TRANSLATION_PROVIDERS),
+  translationEnabled: z.boolean(),
   translationTargetLanguage: z.enum(TRANSLATION_TARGET_LANGUAGES),
   microphoneDeviceId: z.string().max(512),
   microphoneEnabled: z.boolean(),
@@ -132,7 +133,8 @@ export const parsePersistedSettings = (input: unknown): AppSettings => {
         legacy.settingsRevision === 2 ||
         legacy.settingsRevision === 3 ||
         legacy.settingsRevision === 4 ||
-        legacy.settingsRevision === 5)
+        legacy.settingsRevision === 5 ||
+        legacy.settingsRevision === 6)
         ? deepgramSource.endpointingMs
         : DEFAULT_DEEPGRAM_TRANSCRIPTION_SETTINGS.endpointingMs,
   }
@@ -148,10 +150,13 @@ export const parsePersistedSettings = (input: unknown): AppSettings => {
   const language = isDeepgramLanguageSupported(model, String(deepgramCandidate.language))
     ? String(deepgramCandidate.language)
     : fallbackLanguage
+  const translationTargetLanguage = TRANSLATION_TARGET_LANGUAGES.find(
+    (targetLanguage) => targetLanguage === legacy.translationTargetLanguage,
+  )
   const candidate = {
     ...DEFAULT_SETTINGS,
     ...legacy,
-    settingsRevision: 5 as const,
+    settingsRevision: 1 as const,
     transcriptionProvider: 'deepgram' as const,
     transcriptionProviderSettings: {
       deepgram: {
@@ -161,6 +166,12 @@ export const parsePersistedSettings = (input: unknown): AppSettings => {
         ...(language.startsWith('en') ? {} : { redaction: 'none' as const }),
       },
     },
+    translationEnabled:
+      typeof legacy.translationEnabled === 'boolean'
+        ? legacy.translationEnabled
+        : translationTargetLanguage !== undefined,
+    translationTargetLanguage:
+      translationTargetLanguage ?? DEFAULT_SETTINGS.translationTargetLanguage,
     speakerDeviceId:
       typeof legacy.speakerDeviceId === 'string' ? legacy.speakerDeviceId : 'default',
     speakerEnabled:

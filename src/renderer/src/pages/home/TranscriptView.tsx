@@ -45,7 +45,7 @@ const TranscriptView = ({ onExport }: TranscriptViewProps): React.JSX.Element =>
   )
   const translatedText = translations.map((translation) => translation.text.trim()).join(' ')
   const liveText = [finalText, interim.microphone, interim.speaker].filter(Boolean).join(' ')
-  const translationEnabled = settings.translationTargetLanguage !== 'none'
+  const translationEnabled = settings.translationEnabled
   const targetLanguageName = useMemo(() => {
     if (!translationEnabled) return ''
     const names = new Intl.DisplayNames([settings.uiLanguage, 'en'], { type: 'language' })

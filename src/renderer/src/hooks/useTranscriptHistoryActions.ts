@@ -29,6 +29,7 @@ export const useTranscriptHistoryActions = () => {
     (state) => state.app.settings.transcriptionProviderSettings.deepgram.language,
   )
   const translationProvider = useAppSelector((state) => state.app.settings.translationProvider)
+  const translationEnabled = useAppSelector((state) => state.app.settings.translationEnabled)
   const translationTargetLanguage = useAppSelector(
     (state) => state.app.settings.translationTargetLanguage,
   )
@@ -116,6 +117,7 @@ export const useTranscriptHistoryActions = () => {
             id,
             format,
             t('transcript.export'),
+            translationEnabled,
             translationProvider,
             translationTargetLanguage,
           )
@@ -127,7 +129,7 @@ export const useTranscriptHistoryActions = () => {
         void message.error(t('errors.generic'))
       }
     },
-    [message, t, translationProvider, translationTargetLanguage],
+    [message, t, translationEnabled, translationProvider, translationTargetLanguage],
   )
 
   return {

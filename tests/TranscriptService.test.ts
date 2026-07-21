@@ -149,7 +149,8 @@ describe('TranscriptService', () => {
       speechFinal: true,
       confidence: 0.98,
     })
-    await service.translateTranscript(transcript.id, 'bing', 'tr')
+    expect(translator.translate).not.toHaveBeenCalled()
+    await service.translateTranscript(transcript.id, true, 'bing', 'tr')
     publishResult?.({
       source: 'microphone',
       text: 'How are you?',
@@ -206,7 +207,7 @@ describe('TranscriptService', () => {
       { warn: vi.fn() } as unknown as LoggerService,
     )
 
-    await service.translateTranscript(stoppedTranscript.id, 'google', 'tr')
+    await service.translateTranscript(stoppedTranscript.id, true, 'google', 'tr')
     await vi.waitFor(() => expect(storage.appendTranslation).toHaveBeenCalledOnce())
 
     expect(translator.translate).toHaveBeenCalledWith(
