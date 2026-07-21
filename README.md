@@ -1,6 +1,6 @@
 # Transcript
 
-Transcript is an Electron desktop application that captures microphone and speaker audio independently and transcribes speech in real time.
+Transcript is an Electron desktop application that captures microphone and speaker audio independently and provides both real-time transcription and translation using Google and Bing.
 
 Chrome Transcript Extension -> https://github.com/bariskisir/ChromeTranscript
 
