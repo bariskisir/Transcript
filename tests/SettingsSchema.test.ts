@@ -11,22 +11,41 @@ describe('settings schema migrations', () => {
     const legacySettings: Record<string, unknown> = {
       ...DEFAULT_SETTINGS,
       settingsRevision: 2,
+      transcriptionProvider: undefined,
+      transcriptionProviderSettings: undefined,
+      language: 'tr',
+      endpointingMs: 250,
     }
     delete legacySettings.timeFormat
 
     const settings = parsePersistedSettings(legacySettings)
 
-    expect(settings.settingsRevision).toBe(3)
+    expect(settings.settingsRevision).toBe(5)
     expect(settings.timeFormat).toBe('24-hour')
+    expect(settings.transcriptionProvider).toBe('deepgram')
+    expect(settings.transcriptionProviderSettings.deepgram).toMatchObject({
+      language: 'tr',
+      endpointingMs: 250,
+    })
+    expect(settings).not.toHaveProperty('language')
+    expect(settings).not.toHaveProperty('endpointingMs')
+    expect(settings.translationProvider).toBe('google')
+    expect(settings.translationTargetLanguage).toBe('none')
   })
 
   it('accepts bounded settings patches and rejects unrelated configuration keys', () => {
-    expect(settingsPatchSchema.parse({ theme: 'dark', endpointingMs: 250 })).toEqual({
+    expect(
+      settingsPatchSchema.parse({
+        theme: 'dark',
+        transcriptionProviderSettings: { deepgram: { endpointingMs: 250 } },
+      }),
+    ).toEqual({
       theme: 'dark',
-      endpointingMs: 250,
+      transcriptionProviderSettings: { deepgram: { endpointingMs: 250 } },
     })
     expect(() => settingsPatchSchema.parse({})).toThrow('At least one setting must be provided.')
     expect(() => settingsPatchSchema.parse({ theme: 'dark', unrelated: true })).toThrow()
-    expect(() => settingsPatchSchema.parse({ settingsRevision: 3 })).toThrow()
+    expect(() => settingsPatchSchema.parse({ endpointingMs: 250 })).toThrow()
+    expect(() => settingsPatchSchema.parse({ settingsRevision: 5 })).toThrow()
   })
 })

@@ -9,6 +9,7 @@ import { createLogger } from '@renderer/services/LoggerService'
 import {
   hydrate,
   receiveTranscriptResult,
+  receiveTranslationResult,
   setSessionState,
   setUpdateState,
 } from '@renderer/store/appSlice'
@@ -31,11 +32,15 @@ export const useAppInit = (): void => {
     const cleanup = [
       window.transcript.onSessionState((event) => dispatch(setSessionState(event))),
       window.transcript.onTranscriptResult((event) => dispatch(receiveTranscriptResult(event))),
+      window.transcript.onTranslationResult((event) => dispatch(receiveTranslationResult(event))),
       window.transcript.onUpdateState((event) => dispatch(setUpdateState(event))),
       window.transcript.onError((event) => {
         logger.error('Main process reported an application error.', event.message)
         void messageRef.current.error(
-          i18n.t('errors.runtimeDetails', { details: event.message }),
+          i18n.t(
+            event.context === 'translation' ? 'errors.translationDetails' : 'errors.runtimeDetails',
+            { details: event.message },
+          ),
           8,
         )
       }),

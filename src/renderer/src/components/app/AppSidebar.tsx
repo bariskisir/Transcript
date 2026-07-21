@@ -5,13 +5,13 @@
 import { Button, Tooltip } from 'antd'
 import { Monitor, Moon, Pin, Settings, Sun } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import type { AppSettings, ThemeMode } from '@shared/types'
+import type { AppSettingsPatch, ThemeMode } from '@shared/types'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
 import { setPage } from '@renderer/store/appSlice'
 import styles from './AppSidebar.module.scss'
 
 interface AppSidebarProps {
-  onSettingsChange: (patch: Partial<AppSettings>) => Promise<void>
+  onSettingsChange: (patch: AppSettingsPatch) => Promise<void>
 }
 
 const NEXT_THEME: Record<ThemeMode, ThemeMode> = {
@@ -28,7 +28,7 @@ const AppSidebar = ({ onSettingsChange }: AppSidebarProps): React.JSX.Element =>
   const { t } = useTranslation()
 
   /** Persists a global setting from the sidebar. */
-  const update = async (patch: Partial<AppSettings>): Promise<void> => {
+  const update = async (patch: AppSettingsPatch): Promise<void> => {
     await onSettingsChange(patch)
   }
 

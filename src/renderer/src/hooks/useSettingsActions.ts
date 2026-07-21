@@ -9,7 +9,7 @@ import type { AppSettingsPatch } from '@shared/types'
 import i18n from '@renderer/i18n'
 import { createLogger } from '@renderer/services/LoggerService'
 import SettingsPersistenceQueue from '@renderer/services/SettingsPersistenceQueue'
-import { useAppDispatch } from '@renderer/store'
+import { useAppDispatch, useAppSelector } from '@renderer/store'
 import { setApiBalance, setHasApiKey, setSettings } from '@renderer/store/appSlice'
 
 const logger = createLogger('SettingsActions')
@@ -18,6 +18,7 @@ const settingsPersistenceQueue = new SettingsPersistenceQueue()
 /** Returns stable settings and credential commands backed by the preload API. */
 export const useSettingsActions = () => {
   const dispatch = useAppDispatch()
+  const currentTranscriptId = useAppSelector((state) => state.app.currentTranscript?.id ?? null)
   const { message } = AntdApp.useApp()
   const { t } = useTranslation()
 
@@ -29,12 +30,28 @@ export const useSettingsActions = () => {
         dispatch(setSettings(saved))
         document.documentElement.lang = saved.uiLanguage
         await i18n.changeLanguage(saved.uiLanguage)
+        if (
+          (patch.translationTargetLanguage !== undefined ||
+            patch.translationProvider !== undefined) &&
+          currentTranscriptId
+        ) {
+          try {
+            await window.transcript.translateTranscript(
+              currentTranscriptId,
+              saved.translationProvider,
+              saved.translationTargetLanguage,
+            )
+          } catch (error) {
+            logger.error('Transcript translation could not be scheduled.', error)
+            void message.error(t('errors.generic'))
+          }
+        }
       } catch (error) {
         logger.error('Settings could not be saved.', error)
         void message.error(t('errors.generic'))
       }
     },
-    [dispatch, message, t],
+    [currentTranscriptId, dispatch, message, t],
   )
 
   /** Verifies and saves a Deepgram API key. */

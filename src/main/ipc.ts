@@ -5,6 +5,7 @@
 import { writeFile } from 'node:fs/promises'
 import { app, dialog, ipcMain, shell, type BrowserWindow, type WebContents } from 'electron'
 import { IpcChannel } from '@shared/IpcChannel'
+import { TRANSLATION_PROVIDERS, TRANSLATION_TARGET_LANGUAGES } from '@shared/translation'
 import {
   AUDIO_SOURCES,
   LOG_LEVELS,
@@ -39,6 +40,8 @@ const transcriptRenameSchema = z.object({
 })
 const formatSchema = z.enum(TRANSCRIPT_FORMATS)
 const dialogTitleSchema = z.string().trim().min(1).max(120)
+const translationProviderSchema = z.enum(TRANSLATION_PROVIDERS)
+const translationTargetSchema = z.enum(TRANSLATION_TARGET_LANGUAGES)
 const apiKeySchema = z.string().trim().min(20).max(512)
 const rendererLogSchema = z.object({
   level: z.enum(LOG_LEVELS),
@@ -96,7 +99,11 @@ export const registerIpc = (window: BrowserWindow, services: IpcServices): void 
       services.storage.listTranscripts(),
       services.credentials.hasApiKey(),
     ])
-    if (initialTranscripts.length === 0) await services.storage.createTranscript(settings.language)
+    if (initialTranscripts.length === 0) {
+      await services.storage.createTranscript(
+        settings.transcriptionProviderSettings.deepgram.language,
+      )
+    }
     const transcripts =
       initialTranscripts.length === 0
         ? await services.storage.listTranscripts()
@@ -183,11 +190,31 @@ export const registerIpc = (window: BrowserWindow, services: IpcServices): void 
     return services.storage.deleteTranscript(transcriptIdSchema.parse(input))
   })
   ipcMain.handle(
+    IpcChannel.TranscriptTranslate,
+    async (event, idInput: unknown, providerInput: unknown, targetInput: unknown) => {
+      assertSender(event.sender)
+      await services.transcript.translateTranscript(
+        transcriptIdSchema.parse(idInput),
+        translationProviderSchema.parse(providerInput),
+        translationTargetSchema.parse(targetInput),
+      )
+    },
+  )
+  ipcMain.handle(
     IpcChannel.TranscriptExport,
-    async (event, idInput: unknown, formatInput: unknown, dialogTitleInput: unknown) => {
+    async (
+      event,
+      idInput: unknown,
+      formatInput: unknown,
+      dialogTitleInput: unknown,
+      providerInput: unknown,
+      targetInput: unknown,
+    ) => {
       assertSender(event.sender)
       const format = formatSchema.parse(formatInput)
       const dialogTitle = dialogTitleSchema.parse(dialogTitleInput)
+      const provider = translationProviderSchema.parse(providerInput)
+      const targetLanguage = translationTargetSchema.parse(targetInput)
       const transcript = await services.storage.getTranscript(transcriptIdSchema.parse(idInput))
       const result = await dialog.showSaveDialog(window, {
         title: dialogTitle,
@@ -195,7 +222,11 @@ export const registerIpc = (window: BrowserWindow, services: IpcServices): void 
         filters: [{ name: format.toUpperCase(), extensions: [format] }],
       })
       if (result.canceled || !result.filePath) return false
-      await writeFile(result.filePath, renderTranscript(transcript, format), 'utf8')
+      await writeFile(
+        result.filePath,
+        renderTranscript(transcript, format, provider, targetLanguage),
+        'utf8',
+      )
       return true
     },
   )

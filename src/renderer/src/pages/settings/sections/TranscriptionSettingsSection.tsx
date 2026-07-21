@@ -13,16 +13,21 @@ import {
   getDeepgramModel,
   type DeepgramModel,
 } from '@shared/deepgram'
-import type { AppSettings } from '@shared/types'
+import {
+  TRANSCRIPTION_PROVIDERS,
+  type DeepgramTranscriptionSettingsPatch,
+  type TranscriptionProvider,
+} from '@shared/transcription'
 import { useDesktopActions } from '@renderer/hooks/useDesktopActions'
 import { useSettingsActions } from '@renderer/hooks/useSettingsActions'
 import { useAppSelector } from '@renderer/store'
 import SettingLabel from '../components/SettingLabel'
 import styles from '../SettingsPage.module.scss'
 
-/** Displays all provider-specific transcription configuration. */
-const TranscriptionSettingsSection = (): React.JSX.Element => {
+/** Displays Deepgram credentials and its independently typed transcription configuration. */
+const DeepgramSettingsSection = (): React.JSX.Element => {
   const settings = useAppSelector((state) => state.app.settings)
+  const deepgramSettings = settings.transcriptionProviderSettings.deepgram
   const hasApiKey = useAppSelector((state) => state.app.hasApiKey)
   const apiBalance = useAppSelector((state) => state.app.apiBalance)
   const [apiKey, setApiKey] = useState('')
@@ -31,7 +36,7 @@ const TranscriptionSettingsSection = (): React.JSX.Element => {
   const desktopActions = useDesktopActions()
   const refreshApiBalance = settingsActions.refreshApiBalance
   const { t } = useTranslation()
-  const selectedModel = getDeepgramModel(settings.model)
+  const selectedModel = getDeepgramModel(deepgramSettings.model)
   const languageNames = useMemo(
     () => new Intl.DisplayNames([settings.uiLanguage, 'en'], { type: 'language' }),
     [settings.uiLanguage],
@@ -73,8 +78,8 @@ const TranscriptionSettingsSection = (): React.JSX.Element => {
   }, [hasApiKey, refreshApiBalance])
 
   /** Persists a partial provider setting through the serialized settings queue. */
-  const updateSettings = async (patch: Partial<AppSettings>): Promise<void> => {
-    await settingsActions.saveSettings(patch)
+  const updateSettings = async (patch: DeepgramTranscriptionSettingsPatch): Promise<void> => {
+    await settingsActions.saveSettings({ transcriptionProviderSettings: { deepgram: patch } })
   }
 
   /** Validates and saves the currently entered API key. */
@@ -96,8 +101,8 @@ const TranscriptionSettingsSection = (): React.JSX.Element => {
   /** Selects a model and falls back to its first compatible language when required. */
   const handleModelChange = async (model: DeepgramModel): Promise<void> => {
     const catalog = getDeepgramModel(model)
-    const language = catalog.languages.some((candidate) => candidate === settings.language)
-      ? settings.language
+    const language = catalog.languages.some((candidate) => candidate === deepgramSettings.language)
+      ? deepgramSettings.language
       : (catalog.languages[0] ?? 'en')
     await updateSettings({
       model,
@@ -117,16 +122,14 @@ const TranscriptionSettingsSection = (): React.JSX.Element => {
   /** Normalizes and persists the editable Deepgram model version. */
   const handleModelVersionCommit = async (value: string): Promise<void> => {
     const modelVersion = value.trim() || 'latest'
-    if (modelVersion !== settings.modelVersion) await updateSettings({ modelVersion })
+    if (modelVersion !== deepgramSettings.modelVersion) await updateSettings({ modelVersion })
   }
 
   /** Formats one supported BCP-47 language code for the current interface locale. */
   const formatLanguage = (code: string): string => `${languageNames.of(code) ?? code} (${code})`
 
   return (
-    <div className={styles.settingContainer}>
-      <h1 className={styles.settingPageTitle}>{t('settings.transcription')}</h1>
-
+    <>
       <h2 className={styles.groupTitle}>{t('settings.connection')}</h2>
       <section className={styles.settingGroup}>
         <div className={styles.apiCreditNotice}>
@@ -199,7 +202,7 @@ const TranscriptionSettingsSection = (): React.JSX.Element => {
           <div className={styles.settingControl}>
             <Select
               className={styles.wideControl ?? ''}
-              value={settings.model}
+              value={deepgramSettings.model}
               options={DEEPGRAM_MODELS.map((model) => ({
                 value: model.value,
                 label: model.label,
@@ -216,7 +219,7 @@ const TranscriptionSettingsSection = (): React.JSX.Element => {
           <div className={styles.settingControl}>
             <Select
               className={styles.wideControl ?? ''}
-              value={settings.language}
+              value={deepgramSettings.language}
               showSearch
               optionFilterProp="label"
               options={selectedModel.languages.map((language) => ({
@@ -235,8 +238,8 @@ const TranscriptionSettingsSection = (): React.JSX.Element => {
           <div className={styles.settingControl}>
             <Input
               className={styles.compactControl}
-              key={settings.modelVersion}
-              defaultValue={settings.modelVersion}
+              key={deepgramSettings.modelVersion}
+              defaultValue={deepgramSettings.modelVersion}
               onPressEnter={(event) => void handleModelVersionCommit(event.currentTarget.value)}
               onBlur={(event) => void handleModelVersionCommit(event.currentTarget.value)}
             />
@@ -252,7 +255,7 @@ const TranscriptionSettingsSection = (): React.JSX.Element => {
           <Select
             className={styles.fullControl ?? ''}
             mode="tags"
-            value={settings.vocabulary}
+            value={deepgramSettings.vocabulary}
             tokenSeparators={[',']}
             placeholder={t('settings.vocabularyPlaceholder')}
             options={[]}
@@ -276,7 +279,7 @@ const TranscriptionSettingsSection = (): React.JSX.Element => {
             />
             <div className={styles.settingControl}>
               <Switch
-                checked={settings[setting]}
+                checked={deepgramSettings[setting]}
                 onChange={(checked) => void updateSettings({ [setting]: checked })}
               />
             </div>
@@ -297,7 +300,7 @@ const TranscriptionSettingsSection = (): React.JSX.Element => {
                 className={styles.durationInput ?? ''}
                 min={10}
                 max={5000}
-                value={settings.endpointingMs}
+                value={deepgramSettings.endpointingMs}
                 onChange={(value) =>
                   value !== null && void updateSettings({ endpointingMs: value })
                 }
@@ -319,7 +322,7 @@ const TranscriptionSettingsSection = (): React.JSX.Element => {
           />
           <div className={styles.settingControl}>
             <Switch
-              checked={settings.utteranceEndEnabled}
+              checked={deepgramSettings.utteranceEndEnabled}
               onChange={(utteranceEndEnabled) => void updateSettings({ utteranceEndEnabled })}
             />
             <Space.Compact className={styles.durationControl}>
@@ -327,8 +330,8 @@ const TranscriptionSettingsSection = (): React.JSX.Element => {
                 className={styles.durationInput ?? ''}
                 min={1000}
                 max={5000}
-                disabled={!settings.utteranceEndEnabled}
-                value={settings.utteranceEndMs}
+                disabled={!deepgramSettings.utteranceEndEnabled}
+                value={deepgramSettings.utteranceEndMs}
                 onChange={(value) =>
                   value !== null && void updateSettings({ utteranceEndMs: value })
                 }
@@ -336,7 +339,7 @@ const TranscriptionSettingsSection = (): React.JSX.Element => {
               <Input
                 className={styles.durationUnit ?? ''}
                 value="ms"
-                disabled={!settings.utteranceEndEnabled}
+                disabled={!deepgramSettings.utteranceEndEnabled}
                 readOnly
                 tabIndex={-1}
                 aria-label="milliseconds"
@@ -356,7 +359,7 @@ const TranscriptionSettingsSection = (): React.JSX.Element => {
           <div className={styles.settingControl}>
             <Select
               className={styles.compactControl ?? ''}
-              value={settings.diarization}
+              value={deepgramSettings.diarization}
               options={DEEPGRAM_DIARIZATION_MODES.map((mode) => ({
                 value: mode,
                 label: t(`settings.diarizationModes.${mode}`),
@@ -373,8 +376,8 @@ const TranscriptionSettingsSection = (): React.JSX.Element => {
           <div className={styles.settingControl}>
             <Select
               className={styles.compactControl ?? ''}
-              value={settings.redaction}
-              disabled={!settings.language.startsWith('en')}
+              value={deepgramSettings.redaction}
+              disabled={!deepgramSettings.language.startsWith('en')}
               options={DEEPGRAM_REDACTION_MODES.map((mode) => ({
                 value: mode,
                 label: t(`settings.redactionModes.${mode}`),
@@ -390,12 +393,53 @@ const TranscriptionSettingsSection = (): React.JSX.Element => {
           />
           <div className={styles.settingControl}>
             <Switch
-              checked={settings.mipOptOut}
+              checked={deepgramSettings.mipOptOut}
               onChange={(mipOptOut) => void updateSettings({ mipOptOut })}
             />
           </div>
         </div>
       </section>
+    </>
+  )
+}
+
+/** Displays provider selection and renders only the selected provider's independent settings. */
+const TranscriptionSettingsSection = (): React.JSX.Element => {
+  const settings = useAppSelector((state) => state.app.settings)
+  const session = useAppSelector((state) => state.app.session.state)
+  const settingsActions = useSettingsActions()
+  const { t } = useTranslation()
+
+  return (
+    <div className={styles.settingContainer}>
+      <h1 className={styles.settingPageTitle}>{t('settings.transcription')}</h1>
+
+      <h2 className={styles.groupTitle}>{t('settings.transcriptionService')}</h2>
+      <section className={styles.settingGroup}>
+        <div className={styles.settingRow}>
+          <SettingLabel
+            title={t('settings.transcriptionProvider')}
+            description={t('settings.transcriptionProviderDescription')}
+          />
+          <div className={styles.settingControl}>
+            <Select<TranscriptionProvider>
+              className={styles.wideControl ?? ''}
+              value={settings.transcriptionProvider}
+              disabled={session !== 'idle'}
+              virtual={false}
+              options={TRANSCRIPTION_PROVIDERS.map((provider) => ({
+                value: provider,
+                label: t(`settings.transcriptionProviders.${provider}`),
+              }))}
+              onChange={(transcriptionProvider) =>
+                void settingsActions.saveSettings({ transcriptionProvider })
+              }
+            />
+          </div>
+        </div>
+      </section>
+
+      {settings.transcriptionProvider === 'deepgram' && <DeepgramSettingsSection />}
     </div>
   )
 }

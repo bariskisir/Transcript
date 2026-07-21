@@ -16,6 +16,7 @@ export enum IpcChannel {
   TranscriptGet = 'transcript:get',
   TranscriptRename = 'transcript:rename',
   TranscriptDelete = 'transcript:delete',
+  TranscriptTranslate = 'transcript:translate',
   TranscriptExport = 'transcript:export',
   WindowAlwaysOnTop = 'window:always-on-top',
   ThemeSet = 'theme:set',
@@ -26,6 +27,7 @@ export enum IpcChannel {
   UpdatesInstall = 'updates:install',
   SessionState = 'event:session-state',
   TranscriptResult = 'event:transcript-result',
+  TranslationResult = 'event:translation-result',
   AppError = 'event:error',
   UpdateState = 'event:update-state',
 }

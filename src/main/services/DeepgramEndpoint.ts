@@ -3,10 +3,10 @@
  */
 
 import { getDeepgramModel } from '@shared/deepgram'
-import type { AppSettings } from '@shared/types'
+import type { DeepgramTranscriptionSettings } from '@shared/transcription'
 
 /** Builds a linear16 mono streaming URL with only compatible optional parameters. */
-export const buildDeepgramEndpoint = (settings: AppSettings): string => {
+export const buildDeepgramEndpoint = (settings: DeepgramTranscriptionSettings): string => {
   const model = getDeepgramModel(settings.model)
   const query = new URLSearchParams({
     model: settings.model,

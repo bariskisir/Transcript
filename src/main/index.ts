@@ -11,10 +11,13 @@ import AppUpdater from './services/AppUpdater'
 import CredentialService from './services/CredentialService'
 import DeepgramAccountService from './services/DeepgramAccountService'
 import DeepgramService from './services/DeepgramService'
+import BingTranslateService from './services/BingTranslateService'
+import GoogleTranslateService from './services/GoogleTranslateService'
 import LoggerService from './services/LoggerService'
 import LegacyDataMigrationService from './services/LegacyDataMigrationService'
 import StorageService from './services/StorageService'
 import TranscriptService from './services/TranscriptService'
+import TranslationProviderService from './services/TranslationProviderService'
 import WindowService from './services/WindowService'
 
 const windowService = new WindowService()
@@ -34,6 +37,10 @@ const openApplicationWindow = async (): Promise<void> => {
   const credentials = new CredentialService(join(applicationPaths.dataRoot, 'credentials.bin'))
   const deepgramAccount = new DeepgramAccountService()
   const deepgram = new DeepgramService(logger)
+  const translator = new TranslationProviderService(
+    new GoogleTranslateService(),
+    new BingTranslateService(),
+  )
   const updater = new AppUpdater(logger)
   const window = await windowService.createWindow(logger)
 
@@ -41,11 +48,14 @@ const openApplicationWindow = async (): Promise<void> => {
     storage,
     credentials,
     deepgram,
+    translator,
     {
       onState: (event) =>
         windowService.getMainWindow()?.webContents.send(IpcChannel.SessionState, event),
       onResult: (event) =>
         windowService.getMainWindow()?.webContents.send(IpcChannel.TranscriptResult, event),
+      onTranslation: (event) =>
+        windowService.getMainWindow()?.webContents.send(IpcChannel.TranslationResult, event),
       onError: (event) =>
         windowService.getMainWindow()?.webContents.send(IpcChannel.AppError, event),
     },

@@ -1,10 +1,10 @@
 /**
- * Renders the full-space continuous live transcript with export controls.
+ * Renders source and translated live transcripts with sentence-level hover correspondence.
  */
 
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Dropdown, type MenuProps } from 'antd'
-import { AudioLines, Download } from 'lucide-react'
+import { AudioLines, Download, Languages } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { TRANSCRIPT_FORMATS, type TranscriptFormat } from '@shared/types'
 import { useAppSelector } from '@renderer/store'
@@ -14,12 +14,15 @@ interface TranscriptViewProps {
   onExport: (id: string, format: TranscriptFormat) => Promise<void>
 }
 
-/** Displays final text plus in-place interim hypotheses as one flowing document. */
+/** Displays final and interim source text above its optional live translated sentences. */
 const TranscriptView = ({ onExport }: TranscriptViewProps): React.JSX.Element => {
   const transcript = useAppSelector((state) => state.app.currentTranscript)
   const interim = useAppSelector((state) => state.app.interim)
   const session = useAppSelector((state) => state.app.session.state)
-  const scrollRef = useRef<HTMLDivElement>(null)
+  const settings = useAppSelector((state) => state.app.settings)
+  const sourceScrollRef = useRef<HTMLDivElement>(null)
+  const translationScrollRef = useRef<HTMLDivElement>(null)
+  const [hoveredTranslationId, setHoveredTranslationId] = useState<string | null>(null)
   const { t } = useTranslation()
   const finalText = useMemo(
     () =>
@@ -29,14 +32,66 @@ const TranscriptView = ({ onExport }: TranscriptViewProps): React.JSX.Element =>
         .join(' ') ?? '',
     [transcript?.segments],
   )
+  const translations = useMemo(
+    () =>
+      [...(transcript?.translations ?? [])]
+        .filter(
+          (translation) =>
+            translation.provider === settings.translationProvider &&
+            translation.targetLanguage === settings.translationTargetLanguage,
+        )
+        .sort((left, right) => left.sourceStartIndex - right.sourceStartIndex),
+    [settings.translationProvider, settings.translationTargetLanguage, transcript?.translations],
+  )
+  const translatedText = translations.map((translation) => translation.text.trim()).join(' ')
   const liveText = [finalText, interim.microphone, interim.speaker].filter(Boolean).join(' ')
+  const translationEnabled = settings.translationTargetLanguage !== 'none'
+  const targetLanguageName = useMemo(() => {
+    if (!translationEnabled) return ''
+    const names = new Intl.DisplayNames([settings.uiLanguage, 'en'], { type: 'language' })
+    return names.of(settings.translationTargetLanguage) ?? settings.translationTargetLanguage
+  }, [settings.translationTargetLanguage, settings.uiLanguage, translationEnabled])
 
-  /** Keeps the latest corrected hypothesis visible as the continuous document grows. */
+  /** Keeps each live pane pinned to its newest text while content grows. */
   useEffect(() => {
-    if (liveText && scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+    if (liveText && sourceScrollRef.current) {
+      sourceScrollRef.current.scrollTop = sourceScrollRef.current.scrollHeight
     }
   }, [liveText])
+
+  useEffect(() => {
+    if (translatedText && translationScrollRef.current) {
+      translationScrollRef.current.scrollTop = translationScrollRef.current.scrollHeight
+    }
+  }, [translatedText])
+
+  /** Splits source text around translated ranges so matching sentences can highlight together. */
+  const renderMappedSourceText = (): React.ReactNode[] => {
+    const nodes: React.ReactNode[] = []
+    let cursor = 0
+
+    translations.forEach((translation) => {
+      const start = translation.sourceStartIndex
+      const end = translation.sourceEndIndex
+      if (start < cursor || end <= start || end > finalText.length) return
+      if (start > cursor) nodes.push(finalText.slice(cursor, start))
+      const highlighted = hoveredTranslationId === translation.id
+      nodes.push(
+        <mark
+          className={`${styles.mappedSentence} ${highlighted ? styles.highlightedSentence : ''}`}
+          key={translation.id}
+          onMouseEnter={() => setHoveredTranslationId(translation.id)}
+          onMouseLeave={() => setHoveredTranslationId(null)}
+        >
+          {finalText.slice(start, end)}
+        </mark>,
+      )
+      cursor = end
+    })
+
+    if (cursor < finalText.length) nodes.push(finalText.slice(cursor))
+    return nodes
+  }
 
   const exportItems: MenuProps['items'] = TRANSCRIPT_FORMATS.map((format) => ({
     key: format,
@@ -46,31 +101,68 @@ const TranscriptView = ({ onExport }: TranscriptViewProps): React.JSX.Element =>
 
   return (
     <section className={styles.container}>
-      <div ref={scrollRef} className={`${styles.scrollArea} selectable`}>
-        {!hasContent ? (
-          <div className={styles.emptyState}>
-            <div className={styles.emptyIcon}>
-              <AudioLines size={25} />
+      <div className={styles.panes}>
+        <div ref={sourceScrollRef} className={`${styles.scrollArea} selectable`}>
+          {!hasContent ? (
+            <div className={styles.emptyState}>
+              <div className={styles.emptyIcon}>
+                <AudioLines size={25} />
+              </div>
+              <h2>{t('transcript.emptyTitle')}</h2>
+              <p>{t('transcript.emptyDescription')}</p>
             </div>
-            <h2>{t('transcript.emptyTitle')}</h2>
-            <p>{t('transcript.emptyDescription')}</p>
-          </div>
-        ) : (
-          <div className={styles.transcriptBody}>
-            <p className={styles.continuousText}>
-              {finalText}
-              {finalText && (interim.microphone || interim.speaker) ? ' ' : ''}
-              {(['microphone', 'speaker'] as const).map((source) =>
-                interim[source] ? (
-                  <span className={styles.interimText} key={source}>
-                    {interim[source].trim()}{' '}
-                  </span>
-                ) : null,
+          ) : (
+            <div className={styles.transcriptBody}>
+              <p className={styles.continuousText}>
+                {renderMappedSourceText()}
+                {finalText && (interim.microphone || interim.speaker) ? ' ' : ''}
+                {(['microphone', 'speaker'] as const).map((source) =>
+                  interim[source] ? (
+                    <span className={styles.interimText} key={source}>
+                      {interim[source].trim()}{' '}
+                    </span>
+                  ) : null,
+                )}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {translationEnabled && (
+          <>
+            <div className={styles.translationDivider}>
+              <Languages size={13} />
+              <span>{t('transcript.translationTo', { language: targetLanguageName })}</span>
+            </div>
+            <div
+              ref={translationScrollRef}
+              className={`${styles.scrollArea} ${styles.translationPane} selectable`}
+            >
+              {translations.length === 0 ? (
+                <div className={styles.translationEmpty}>{t('transcript.translationWaiting')}</div>
+              ) : (
+                <div className={styles.transcriptBody}>
+                  <p className={styles.continuousText}>
+                    {translations.map((translation, index) => (
+                      <span key={translation.id}>
+                        {index > 0 ? ' ' : ''}
+                        <mark
+                          className={`${styles.mappedSentence} ${hoveredTranslationId === translation.id ? styles.highlightedSentence : ''}`}
+                          onMouseEnter={() => setHoveredTranslationId(translation.id)}
+                          onMouseLeave={() => setHoveredTranslationId(null)}
+                        >
+                          {translation.text.trim()}
+                        </mark>
+                      </span>
+                    ))}
+                  </p>
+                </div>
               )}
-            </p>
-          </div>
+            </div>
+          </>
         )}
       </div>
+
       <footer className={styles.footer}>
         <span className={`${styles.status} ${session === 'recording' ? styles.active : ''}`}>
           <span className={styles.statusDot} />

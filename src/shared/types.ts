@@ -2,7 +2,13 @@
  * Defines serializable domain models and cross-process application contracts.
  */
 
-import type { DeepgramDiarization, DeepgramModel, DeepgramRedaction } from './deepgram'
+import {
+  DEFAULT_DEEPGRAM_TRANSCRIPTION_SETTINGS,
+  type TranscriptionProvider,
+  type TranscriptionProviderSettings,
+  type TranscriptionProviderSettingsPatch,
+} from './transcription'
+import type { TranslationProvider, TranslationTargetLanguage } from './translation'
 
 export const AUDIO_SOURCES = ['microphone', 'speaker'] as const
 export const APP_LOCALES = ['en', 'tr', 'de', 'fr', 'pt', 'zh', 'es'] as const
@@ -20,60 +26,45 @@ export type LogLevel = (typeof LOG_LEVELS)[number]
 export type DesktopPlatform = 'win32' | 'darwin' | 'linux'
 
 export interface AppSettings {
-  settingsRevision: 3
+  settingsRevision: 5
   uiLanguage: AppLocale
   theme: ThemeMode
   timeFormat: TimeFormat
-  language: string
-  model: DeepgramModel
-  modelVersion: string
+  transcriptionProvider: TranscriptionProvider
+  transcriptionProviderSettings: TranscriptionProviderSettings
+  translationProvider: TranslationProvider
+  translationTargetLanguage: TranslationTargetLanguage
   microphoneDeviceId: string
   microphoneEnabled: boolean
   speakerDeviceId: string
   speakerEnabled: boolean
-  punctuate: boolean
-  smartFormat: boolean
-  numerals: boolean
-  profanityFilter: boolean
-  diarization: DeepgramDiarization
-  redaction: DeepgramRedaction
-  endpointingMs: number
-  utteranceEndEnabled: boolean
-  utteranceEndMs: number
-  vocabulary: string[]
-  mipOptOut: boolean
   alwaysOnTop: boolean
   autoUpdate: boolean
   logLevel: LogLevel
 }
 
 export type AppSettingsPatch = {
-  [Key in keyof Omit<AppSettings, 'settingsRevision'>]?: AppSettings[Key] | undefined
+  [Key in keyof Omit<AppSettings, 'settingsRevision' | 'transcriptionProviderSettings'>]?:
+    AppSettings[Key] | undefined
+} & {
+  transcriptionProviderSettings?: TranscriptionProviderSettingsPatch | undefined
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
-  settingsRevision: 3,
+  settingsRevision: 5,
   uiLanguage: 'en',
   theme: 'system',
   timeFormat: '24-hour',
-  language: 'en',
-  model: 'nova-3',
-  modelVersion: 'latest',
+  transcriptionProvider: 'deepgram',
+  transcriptionProviderSettings: {
+    deepgram: DEFAULT_DEEPGRAM_TRANSCRIPTION_SETTINGS,
+  },
+  translationProvider: 'google',
+  translationTargetLanguage: 'none',
   microphoneDeviceId: 'default',
   microphoneEnabled: true,
   speakerDeviceId: 'default',
   speakerEnabled: true,
-  punctuate: true,
-  smartFormat: true,
-  numerals: true,
-  profanityFilter: false,
-  diarization: 'off',
-  redaction: 'none',
-  endpointingMs: 10,
-  utteranceEndEnabled: true,
-  utteranceEndMs: 1_000,
-  vocabulary: [],
-  mipOptOut: false,
   alwaysOnTop: false,
   autoUpdate: true,
   logLevel: 'info',
@@ -88,6 +79,19 @@ export interface TranscriptSegment {
   offsetMs: number
 }
 
+export interface TranslationSegment {
+  id: string
+  provider: TranslationProvider
+  sourceText: string
+  text: string
+  sourceLanguage: string
+  targetLanguage: Exclude<TranslationTargetLanguage, 'none'>
+  sourceSegmentIds: string[]
+  sourceStartIndex: number
+  sourceEndIndex: number
+  createdAt: string
+}
+
 export interface TranscriptDocument {
   id: string
   title: string
@@ -97,6 +101,7 @@ export interface TranscriptDocument {
   updatedAt: string
   durationMs: number
   segments: TranscriptSegment[]
+  translations: TranslationSegment[]
 }
 
 export interface TranscriptSummary {
@@ -156,8 +161,14 @@ export interface TranscriptResultEvent {
   segment?: TranscriptSegment
 }
 
+export interface TranslationResultEvent {
+  transcriptId: string
+  translation: TranslationSegment
+}
+
 export interface AppErrorEvent {
   source?: AudioSource
+  context?: 'transcription' | 'translation'
   message: string
   recoverable: boolean
 }
@@ -204,8 +215,20 @@ export interface TranscriptApi {
   renameTranscript(id: string, title: string): Promise<TranscriptDocument>
   /** Deletes one transcript while preserving the last-workspace invariant. */
   deleteTranscript(id: string): Promise<DeleteTranscriptResult>
+  /** Changes a transcript's live provider/target and schedules its existing text for translation. */
+  translateTranscript(
+    id: string,
+    provider: TranslationProvider,
+    targetLanguage: TranslationTargetLanguage,
+  ): Promise<void>
   /** Exports a transcript through a native save dialog. */
-  exportTranscript(id: string, format: TranscriptFormat, dialogTitle: string): Promise<boolean>
+  exportTranscript(
+    id: string,
+    format: TranscriptFormat,
+    dialogTitle: string,
+    provider: TranslationProvider,
+    targetLanguage: TranslationTargetLanguage,
+  ): Promise<boolean>
   /** Changes the native always-on-top state. */
   setAlwaysOnTop(enabled: boolean): Promise<void>
   /** Synchronizes native window chrome with the resolved renderer theme. */
@@ -224,6 +247,8 @@ export interface TranscriptApi {
   onSessionState(listener: (event: SessionStateEvent) => void): () => void
   /** Subscribes to interim and final transcription results. */
   onTranscriptResult(listener: (event: TranscriptResultEvent) => void): () => void
+  /** Subscribes to completed live sentence translations. */
+  onTranslationResult(listener: (event: TranslationResultEvent) => void): () => void
   /** Subscribes to recoverable application errors. */
   onError(listener: (event: AppErrorEvent) => void): () => void
   /** Subscribes to updater lifecycle events. */

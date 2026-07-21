@@ -2,7 +2,8 @@
  * Owns one source-specific Deepgram streaming WebSocket connection.
  */
 
-import type { AppSettings, AudioSource, LogLevel, TranscriptResultEvent } from '@shared/types'
+import type { DeepgramTranscriptionSettings } from '@shared/transcription'
+import type { AudioSource, LogLevel, TranscriptResultEvent } from '@shared/types'
 import WebSocket from 'ws'
 import { buildDeepgramEndpoint } from './DeepgramEndpoint'
 import { parseDeepgramMessage } from './DeepgramMessageParser'
@@ -10,7 +11,7 @@ import { parseDeepgramMessage } from './DeepgramMessageParser'
 interface ConnectionOptions {
   source: AudioSource
   apiKey: string
-  settings: AppSettings
+  settings: DeepgramTranscriptionSettings
   onResult: (event: TranscriptResultEvent) => void
   onError: (message: string) => void
   onDiagnostic: (level: LogLevel, message: string, details?: unknown) => void

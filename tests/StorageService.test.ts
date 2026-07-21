@@ -45,12 +45,21 @@ describe('StorageService transcript invariant', () => {
       storage.updateSettings({ theme: 'dark' }),
       storage.updateSettings({ logLevel: 'debug' }),
       storage.updateSettings({ autoUpdate: false }),
+      storage.updateSettings({
+        transcriptionProviderSettings: { deepgram: { endpointingMs: 250 } },
+      }),
+      storage.updateSettings({
+        transcriptionProviderSettings: { deepgram: { vocabulary: ['Transcript'] } },
+      }),
     ])
 
     await expect(storage.loadSettings()).resolves.toMatchObject({
       theme: 'dark',
       logLevel: 'debug',
       autoUpdate: false,
+      transcriptionProviderSettings: {
+        deepgram: { endpointingMs: 250, vocabulary: ['Transcript'] },
+      },
     })
   })
 
@@ -125,6 +134,84 @@ describe('StorageService transcript invariant', () => {
 
     const persisted = await storage.getTranscript(transcript.id)
     expect(persisted.segments.map((segment) => segment.text)).toEqual(['First.', 'Second.'])
+  })
+
+  it('persists a source-mapped translation beside its transcript segments', async () => {
+    const storage = await createStorage()
+    const transcript = await storage.createTranscript('en')
+    const sourceId = randomUUID()
+    await storage.appendSegment(transcript.id, {
+      id: sourceId,
+      source: 'microphone',
+      text: 'Hello world.',
+      confidence: 0.99,
+      createdAt: new Date().toISOString(),
+      offsetMs: 100,
+    })
+
+    await storage.appendTranslation(transcript.id, {
+      id: randomUUID(),
+      provider: 'google',
+      sourceText: 'Hello world.',
+      text: 'Merhaba dünya.',
+      sourceLanguage: 'en',
+      targetLanguage: 'tr',
+      sourceSegmentIds: [sourceId],
+      sourceStartIndex: 0,
+      sourceEndIndex: 12,
+      createdAt: new Date().toISOString(),
+    })
+
+    const persisted = await storage.getTranscript(transcript.id)
+    expect(persisted.translations).toHaveLength(1)
+    expect(persisted.translations[0]).toMatchObject({
+      provider: 'google',
+      sourceText: 'Hello world.',
+      text: 'Merhaba dünya.',
+      sourceSegmentIds: [sourceId],
+    })
+  })
+
+  it('migrates translations saved before provider identities to Google', async () => {
+    const { root, storage } = await createStorageContext()
+    const transcript = await storage.createTranscript('en')
+    const sourceId = randomUUID()
+    const createdAt = new Date().toISOString()
+    const legacyTranscript = {
+      ...transcript,
+      segments: [
+        {
+          id: sourceId,
+          source: 'microphone',
+          text: 'Hello world.',
+          confidence: 0.99,
+          createdAt,
+          offsetMs: 100,
+        },
+      ],
+      translations: [
+        {
+          id: randomUUID(),
+          sourceText: 'Hello world.',
+          text: 'Merhaba dünya.',
+          sourceLanguage: 'en',
+          targetLanguage: 'tr',
+          sourceSegmentIds: [sourceId],
+          sourceStartIndex: 0,
+          sourceEndIndex: 12,
+          createdAt,
+        },
+      ],
+    }
+    await writeFile(
+      join(root, 'transcripts', `${transcript.id}.json`),
+      JSON.stringify(legacyTranscript),
+      'utf8',
+    )
+
+    const migrated = await storage.getTranscript(transcript.id)
+
+    expect(migrated.translations[0]?.provider).toBe('google')
   })
 
   it('renames a transcript without changing its content', async () => {

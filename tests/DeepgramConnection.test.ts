@@ -50,7 +50,7 @@ const createConnection = (): {
   const connection = new DeepgramConnection({
     source: 'microphone',
     apiKey: 'test-key',
-    settings: DEFAULT_SETTINGS,
+    settings: DEFAULT_SETTINGS.transcriptionProviderSettings.deepgram,
     onResult: vi.fn(),
     onError,
     onDiagnostic: vi.fn(),

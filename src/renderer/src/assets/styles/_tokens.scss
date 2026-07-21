@@ -27,6 +27,8 @@ body[theme-mode='dark'] {
   --list-item-radius: 10px;
   --transcript-microphone: #56a8ff;
   --transcript-speaker: #a78bfa;
+  --color-translation: #52c58b;
+  --color-translation-mute: #52c58b24;
 }
 
 body[theme-mode='light'] {
@@ -54,4 +56,6 @@ body[theme-mode='light'] {
   --navbar-background: #f4f4f4;
   --transcript-microphone: #1677ff;
   --transcript-speaker: #7c3aed;
+  --color-translation: #178a55;
+  --color-translation-mute: #178a551a;
 }

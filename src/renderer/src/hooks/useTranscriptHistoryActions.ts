@@ -25,7 +25,13 @@ export const useTranscriptHistoryActions = () => {
   const dispatch = useAppDispatch()
   const history = useAppSelector((state) => state.app.history)
   const currentTranscriptId = useAppSelector((state) => state.app.currentTranscript?.id ?? null)
-  const speechLanguage = useAppSelector((state) => state.app.settings.language)
+  const speechLanguage = useAppSelector(
+    (state) => state.app.settings.transcriptionProviderSettings.deepgram.language,
+  )
+  const translationProvider = useAppSelector((state) => state.app.settings.translationProvider)
+  const translationTargetLanguage = useAppSelector(
+    (state) => state.app.settings.translationTargetLanguage,
+  )
   const { message } = AntdApp.useApp()
   const { t } = useTranslation()
 
@@ -105,7 +111,15 @@ export const useTranscriptHistoryActions = () => {
   const exportTranscript = useCallback(
     async (id: string, format: TranscriptFormat): Promise<void> => {
       try {
-        if (await window.transcript.exportTranscript(id, format, t('transcript.export'))) {
+        if (
+          await window.transcript.exportTranscript(
+            id,
+            format,
+            t('transcript.export'),
+            translationProvider,
+            translationTargetLanguage,
+          )
+        ) {
           void message.success(t('transcript.exported'))
         }
       } catch (error) {
@@ -113,7 +127,7 @@ export const useTranscriptHistoryActions = () => {
         void message.error(t('errors.generic'))
       }
     },
-    [message, t],
+    [message, t, translationProvider, translationTargetLanguage],
   )
 
   return {

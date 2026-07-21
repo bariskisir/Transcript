@@ -13,6 +13,7 @@ import reducer, {
   addHistorySummary,
   hydrate,
   receiveTranscriptResult,
+  receiveTranslationResult,
   removeHistorySummary,
   replaceCurrentTranscript,
   replaceHistorySummary,
@@ -29,6 +30,7 @@ const transcript: TranscriptDocument = {
   updatedAt: '2026-07-21T10:00:00.000Z',
   durationMs: 0,
   segments: [],
+  translations: [],
 }
 
 describe('live transcript state', () => {
@@ -145,6 +147,33 @@ describe('live transcript state', () => {
 
     expect(state.interim).toEqual({ microphone: '', speaker: '' })
     expect(state.levels).toEqual({ microphone: 0, speaker: 0 })
+  })
+
+  it('appends a live translation only to its matching active transcript', () => {
+    let state = reducer(undefined, setCurrentTranscript(transcript))
+    const translation = {
+      id: 'd851ff1c-1f5b-489c-9b59-f2c94b7b573b',
+      provider: 'google' as const,
+      sourceText: 'Hello.',
+      text: 'Merhaba.',
+      sourceLanguage: 'en',
+      targetLanguage: 'tr' as const,
+      sourceSegmentIds: ['82640d84-52c7-4bf5-8323-e768cf5ac378'],
+      sourceStartIndex: 0,
+      sourceEndIndex: 6,
+      createdAt: '2026-07-21T10:00:02.000Z',
+    }
+
+    state = reducer(state, receiveTranslationResult({ transcriptId: transcript.id, translation }))
+    state = reducer(
+      state,
+      receiveTranslationResult({
+        transcriptId: '194aefb7-374d-42ef-8885-142dbbc9fb7f',
+        translation: { ...translation, id: 'fc0ff9db-72a9-499d-afeb-20e21429f388' },
+      }),
+    )
+
+    expect(state.currentTranscript?.translations).toEqual([translation])
   })
 
   it('updates history atomically without replacing an unrelated active transcript', () => {

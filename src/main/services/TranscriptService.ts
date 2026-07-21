@@ -12,15 +12,24 @@ import type {
   TranscriptDocument,
   TranscriptResultEvent,
   TranscriptSegment,
+  TranslationResultEvent,
+  TranslationSegment,
 } from '@shared/types'
+import type { TranslationProvider, TranslationTargetLanguage } from '@shared/translation'
 import type CredentialService from './CredentialService'
 import type DeepgramService from './DeepgramService'
 import type LoggerService from './LoggerService'
 import type StorageService from './StorageService'
+import type TranslationProviderService from './TranslationProviderService'
+import {
+  findCompletedTranscriptSentences,
+  type CompletedTranscriptSentence,
+} from './TranscriptSentenceMatcher'
 
 interface TranscriptEvents {
   onState: (event: SessionStateEvent) => void
   onResult: (event: TranscriptResultEvent) => void
+  onTranslation: (event: TranslationResultEvent) => void
   onError: (event: AppErrorEvent) => void
 }
 
@@ -45,12 +54,20 @@ export default class TranscriptService {
   private stopPromise: Promise<TranscriptDocument | null> | null = null
   private pendingSegments: TranscriptSegment[] = []
   private persistenceTimer: NodeJS.Timeout | null = null
+  private sessionSegments: TranscriptSegment[] = []
+  private sessionLanguage = ''
+  private translationProvider: TranslationProvider = 'google'
+  private translationTarget: TranslationTargetLanguage = 'none'
+  private readonly translationCoverage = new Map<string, number>()
+  private readonly queuedTranslationKeys = new Set<string>()
+  private readonly translationQueues = new Map<string, Promise<void>>()
 
   /** Creates a session coordinator with explicit service dependencies. */
   public constructor(
     private readonly storage: StorageService,
     private readonly credentials: CredentialService,
     private readonly deepgram: DeepgramService,
+    private readonly translator: TranslationProviderService,
     private readonly events: TranscriptEvents,
     private readonly logger: LoggerService,
   ) {}
@@ -75,19 +92,20 @@ export default class TranscriptService {
   private async startInternal(request: StartSessionRequest): Promise<StartSessionResult> {
     try {
       const sources = this.resolveSources(request)
+      const providerSettings = request.settings.transcriptionProviderSettings.deepgram
       const apiKey = await this.credentials.getApiKey()
       this.throwIfStartCancelled()
       if (!apiKey) throw new Error('Save a valid Deepgram API key before recording.')
       const transcript = request.transcriptId
         ? await this.storage.getTranscript(request.transcriptId)
-        : await this.storage.createTranscript(request.settings.language, request.title)
+        : await this.storage.createTranscript(providerSettings.language, request.title)
       this.startingTranscriptId = transcript.id
       this.throwIfStartCancelled()
       this.events.onState({ state: 'connecting', transcriptId: transcript.id })
       await this.deepgram.start({
         sources,
         apiKey,
-        settings: request.settings,
+        settings: providerSettings,
         onResult: (event) => this.handleResult(event),
         onError: (source, message) => {
           this.logger.error('TranscriptService', 'A Deepgram source reported an error.', {
@@ -105,6 +123,11 @@ export default class TranscriptService {
       this.persistenceQueue = Promise.resolve()
       this.pendingSegments = []
       this.clearPersistenceTimer()
+      this.sessionSegments = [...transcript.segments]
+      this.sessionLanguage = providerSettings.language
+      this.translationProvider = request.settings.translationProvider
+      this.translationTarget = request.settings.translationTargetLanguage
+      this.initializeTranslationCoverage(transcript)
       this.events.onState({
         state: 'recording',
         transcriptId: transcript.id,
@@ -113,9 +136,13 @@ export default class TranscriptService {
       this.logger.info('TranscriptService', 'Recording session started.', {
         transcriptId: transcript.id,
         sources,
-        model: request.settings.model,
-        language: request.settings.language,
+        transcriptionProvider: request.settings.transcriptionProvider,
+        model: providerSettings.model,
+        language: providerSettings.language,
+        translationProvider: request.settings.translationProvider,
+        translationTarget: request.settings.translationTargetLanguage,
       })
+      this.schedulePendingTranslations(transcript.id, true)
       return { transcript, activeSources: sources }
     } catch (error) {
       await this.deepgram.stop()
@@ -134,6 +161,32 @@ export default class TranscriptService {
   /** Sends a source-specific PCM frame to Deepgram. */
   public sendAudio(source: AudioSource, samples: Uint8Array): void {
     if (this.currentTranscriptId) this.deepgram.send(source, samples)
+  }
+
+  /** Changes the target language and translates the selected transcript from its beginning. */
+  public async translateTranscript(
+    transcriptId: string,
+    provider: TranslationProvider,
+    targetLanguage: TranslationTargetLanguage,
+  ): Promise<void> {
+    if (this.currentTranscriptId === transcriptId) {
+      this.translationProvider = provider
+      this.translationTarget = targetLanguage
+      if (targetLanguage !== 'none') this.schedulePendingTranslations(transcriptId, true)
+      return
+    }
+    if (targetLanguage === 'none') return
+
+    const transcript = await this.storage.getTranscript(transcriptId)
+    this.initializeTranslationCoverage(transcript)
+    this.scheduleTranslations(
+      transcript.id,
+      transcript.segments,
+      transcript.language,
+      provider,
+      targetLanguage,
+      true,
+    )
   }
 
   /** Flushes streams, persists duration, and returns the completed transcript. */
@@ -164,7 +217,8 @@ export default class TranscriptService {
     try {
       await this.deepgram.stop()
       this.flushPendingSegments(transcriptId)
-      await this.persistenceQueue
+      this.schedulePendingTranslations(transcriptId, true)
+      await Promise.all([this.persistenceQueue, ...this.translationQueues.values()])
       const transcript = await this.storage.finishTranscript(
         transcriptId,
         this.baseDurationMs + Math.max(0, stoppedAt - this.startedAt),
@@ -192,6 +246,10 @@ export default class TranscriptService {
     this.baseDurationMs = 0
     this.startedAt = 0
     this.pendingSegments = []
+    this.sessionSegments = []
+    this.sessionLanguage = ''
+    this.translationProvider = 'google'
+    this.translationTarget = 'none'
     this.clearPersistenceTimer()
   }
 
@@ -220,6 +278,7 @@ export default class TranscriptService {
       offsetMs: this.baseDurationMs + Math.max(0, Date.now() - this.startedAt),
     }
     this.pendingSegments.push(segment)
+    this.sessionSegments.push(segment)
     if (!this.persistenceTimer) {
       this.persistenceTimer = setTimeout(() => {
         this.persistenceTimer = null
@@ -227,6 +286,118 @@ export default class TranscriptService {
       }, PERSISTENCE_BATCH_MS)
     }
     this.events.onResult({ ...event, segment })
+    this.schedulePendingTranslations(transcriptId, false)
+  }
+
+  /** Enqueues newly completed sentences once for the active language pair. */
+  private schedulePendingTranslations(transcriptId: string, includeTrailing: boolean): void {
+    if (this.translationTarget === 'none' || !this.sessionLanguage) return
+    this.scheduleTranslations(
+      transcriptId,
+      this.sessionSegments,
+      this.sessionLanguage,
+      this.translationProvider,
+      this.translationTarget,
+      includeTrailing,
+    )
+  }
+
+  /** Adds every untranslated sentence after the persisted coverage for one language pair. */
+  private scheduleTranslations(
+    transcriptId: string,
+    segments: TranscriptSegment[],
+    sourceLanguage: string,
+    provider: TranslationProvider,
+    targetLanguage: Exclude<TranslationTargetLanguage, 'none'>,
+    includeTrailing: boolean,
+  ): void {
+    const pairKey = this.translationPairKey(transcriptId, provider, sourceLanguage, targetLanguage)
+    const pending = findCompletedTranscriptSentences(segments, {
+      startIndex: this.translationCoverage.get(pairKey) ?? 0,
+      includeTrailing,
+    })
+
+    pending.forEach((sentence) => {
+      const translationKey = `${pairKey}\u0000${sentence.endIndex}`
+      if (this.queuedTranslationKeys.has(translationKey)) return
+      this.queuedTranslationKeys.add(translationKey)
+      this.translationCoverage.set(pairKey, sentence.endIndex)
+      const queue = (this.translationQueues.get(pairKey) ?? Promise.resolve())
+        .then(() =>
+          this.translateSentence(transcriptId, sentence, provider, sourceLanguage, targetLanguage),
+        )
+        .finally(() => this.queuedTranslationKeys.delete(translationKey))
+      this.translationQueues.set(pairKey, queue)
+      void queue.then(() => {
+        if (this.translationQueues.get(pairKey) === queue) this.translationQueues.delete(pairKey)
+      })
+    })
+  }
+
+  /** Seeds source coverage from every translation already stored in one document. */
+  private initializeTranslationCoverage(transcript: TranscriptDocument): void {
+    transcript.translations.forEach((translation) => {
+      const pairKey = this.translationPairKey(
+        transcript.id,
+        translation.provider,
+        translation.sourceLanguage,
+        translation.targetLanguage,
+      )
+      this.translationCoverage.set(
+        pairKey,
+        Math.max(this.translationCoverage.get(pairKey) ?? 0, translation.sourceEndIndex),
+      )
+    })
+  }
+
+  /** Translates, persists, and publishes one source-mapped sentence without logging its text. */
+  private async translateSentence(
+    transcriptId: string,
+    sentence: CompletedTranscriptSentence,
+    provider: TranslationProvider,
+    sourceLanguage: string,
+    targetLanguage: Exclude<TranslationTargetLanguage, 'none'>,
+  ): Promise<void> {
+    try {
+      const text = await this.translator.translate(
+        provider,
+        sentence.text,
+        sourceLanguage,
+        targetLanguage,
+      )
+      if (!text) return
+      const translation: TranslationSegment = {
+        id: randomUUID(),
+        provider,
+        sourceText: sentence.text,
+        text,
+        sourceLanguage,
+        targetLanguage,
+        sourceSegmentIds: sentence.sourceSegmentIds,
+        sourceStartIndex: sentence.startIndex,
+        sourceEndIndex: sentence.endIndex,
+        createdAt: new Date().toISOString(),
+      }
+      await this.storage.appendTranslation(transcriptId, translation)
+      this.events.onTranslation({ transcriptId, translation })
+    } catch (error) {
+      this.logger.warn('TranscriptService', 'A completed sentence could not be translated.', error)
+      this.events.onError({
+        context: 'translation',
+        message: 'The latest completed sentence could not be translated.',
+        recoverable: true,
+      })
+    }
+  }
+
+  /** Builds a stable transcript and language-pair key for translation coverage. */
+  private translationPairKey(
+    transcriptId: string,
+    provider: TranslationProvider,
+    sourceLanguage: string,
+    targetLanguage: string,
+  ): string {
+    return `${transcriptId}\u0000${provider}\u0000${sourceLanguage}\u0000${targetLanguage}`
   }
 
   /** Moves pending final segments into one serialized AppData write. */

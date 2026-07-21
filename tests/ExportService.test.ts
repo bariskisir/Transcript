@@ -32,6 +32,7 @@ const transcript: TranscriptDocument = {
       offsetMs: 2_000,
     },
   ],
+  translations: [],
 }
 
 describe('renderTranscript', () => {
@@ -43,5 +44,32 @@ describe('renderTranscript', () => {
 
   it('renders lossless JSON', () => {
     expect(JSON.parse(renderTranscript(transcript, 'json'))).toEqual(transcript)
+  })
+
+  it('includes the selected translation in text exports when it has content', () => {
+    const translated: TranscriptDocument = {
+      ...transcript,
+      translations: [
+        {
+          id: 'd851ff1c-1f5b-489c-9b59-f2c94b7b573b',
+          provider: 'bing',
+          sourceText: 'Welcome. Thank you.',
+          text: 'Hoş geldiniz. Teşekkürler.',
+          sourceLanguage: 'en',
+          targetLanguage: 'tr',
+          sourceSegmentIds: transcript.segments.map((segment) => segment.id),
+          sourceStartIndex: 0,
+          sourceEndIndex: 19,
+          createdAt: '2026-07-21T10:00:03.000Z',
+        },
+      ],
+    }
+
+    const result = renderTranscript(translated, 'txt', 'bing', 'tr')
+
+    expect(result).toContain('Translation (tr)')
+    expect(result).toContain('Hoş geldiniz. Teşekkürler.')
+    expect(renderTranscript(translated, 'txt', 'bing', 'de')).not.toContain('Translation (de)')
+    expect(renderTranscript(translated, 'txt', 'google', 'tr')).not.toContain('Translation (tr)')
   })
 })

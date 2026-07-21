@@ -9,6 +9,7 @@ import type {
   SessionStateEvent,
   TranscriptApi,
   TranscriptResultEvent,
+  TranslationResultEvent,
   UpdateStateEvent,
 } from '@shared/types'
 
@@ -47,9 +48,19 @@ const api: TranscriptApi = {
   renameTranscript: (id, title) => ipcRenderer.invoke(IpcChannel.TranscriptRename, { id, title }),
   /** Deletes one local transcript. */
   deleteTranscript: (id) => ipcRenderer.invoke(IpcChannel.TranscriptDelete, id),
+  /** Changes the provider/target and schedules existing transcript text for translation. */
+  translateTranscript: (id, provider, targetLanguage) =>
+    ipcRenderer.invoke(IpcChannel.TranscriptTranslate, id, provider, targetLanguage),
   /** Opens a native dialog and exports one transcript. */
-  exportTranscript: (id, format, dialogTitle) =>
-    ipcRenderer.invoke(IpcChannel.TranscriptExport, id, format, dialogTitle),
+  exportTranscript: (id, format, dialogTitle, provider, targetLanguage) =>
+    ipcRenderer.invoke(
+      IpcChannel.TranscriptExport,
+      id,
+      format,
+      dialogTitle,
+      provider,
+      targetLanguage,
+    ),
   /** Changes the native always-on-top window state. */
   setAlwaysOnTop: (enabled) => ipcRenderer.invoke(IpcChannel.WindowAlwaysOnTop, enabled),
   /** Synchronizes native title-bar colors with the renderer theme. */
@@ -69,6 +80,9 @@ const api: TranscriptApi = {
   /** Subscribes to interim and final transcript results. */
   onTranscriptResult: (listener) =>
     subscribe<TranscriptResultEvent>(IpcChannel.TranscriptResult, listener),
+  /** Subscribes to persisted sentence translations. */
+  onTranslationResult: (listener) =>
+    subscribe<TranslationResultEvent>(IpcChannel.TranslationResult, listener),
   /** Subscribes to recoverable application errors. */
   onError: (listener) => subscribe<AppErrorEvent>(IpcChannel.AppError, listener),
   /** Subscribes to updater lifecycle progress. */

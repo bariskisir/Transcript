@@ -13,7 +13,9 @@ import {
   type TranscriptDocument,
   type TranscriptSegment,
   type TranscriptSummary,
+  type TranslationSegment,
 } from '@shared/types'
+import { ACTIVE_TRANSLATION_TARGET_LANGUAGES, TRANSLATION_PROVIDERS } from '@shared/translation'
 import { z } from 'zod'
 import { parsePersistedSettings, settingsSchema } from '../settingsSchema'
 
@@ -26,6 +28,24 @@ const segmentSchema = z.object({
   offsetMs: z.number().nonnegative(),
 })
 
+const translationSchema = z
+  .object({
+    id: z.uuid(),
+    provider: z.enum(TRANSLATION_PROVIDERS),
+    sourceText: z.string().trim().min(1).max(20_000),
+    text: z.string().trim().min(1).max(20_000),
+    sourceLanguage: z.string().trim().min(1).max(24),
+    targetLanguage: z.enum(ACTIVE_TRANSLATION_TARGET_LANGUAGES),
+    sourceSegmentIds: z.array(z.uuid()).min(1).max(200),
+    sourceStartIndex: z.number().int().nonnegative(),
+    sourceEndIndex: z.number().int().positive(),
+    createdAt: z.iso.datetime(),
+  })
+  .refine((translation) => translation.sourceEndIndex > translation.sourceStartIndex, {
+    path: ['sourceEndIndex'],
+    message: 'Translation source range must have a positive length.',
+  })
+
 const transcriptSchema = z.object({
   id: z.uuid(),
   title: z.string().min(1).max(200),
@@ -35,6 +55,7 @@ const transcriptSchema = z.object({
   updatedAt: z.iso.datetime(),
   durationMs: z.number().nonnegative(),
   segments: z.array(segmentSchema),
+  translations: z.array(translationSchema),
 })
 
 const DEFAULT_TRANSCRIPT_TITLE = 'New Transcript'
@@ -63,6 +84,13 @@ const migrateTranscript = (input: unknown): unknown => {
         ? DEFAULT_TRANSCRIPT_TITLE
         : transcript.title,
     isDefaultTitle,
+    translations: Array.isArray(transcript.translations)
+      ? transcript.translations.map((translation): unknown => {
+          if (!translation || typeof translation !== 'object') return translation
+          const value = translation as Record<string, unknown>
+          return { provider: 'google', ...value }
+        })
+      : [],
     segments: segments.map((segment): unknown => {
       if (!segment || typeof segment !== 'object') return segment
       const value = segment as Record<string, unknown>
@@ -123,7 +151,20 @@ export default class StorageService {
   public async updateSettings(patch: AppSettingsPatch): Promise<AppSettings> {
     return this.withFileLock(this.settingsPath, async () => {
       const current = await this.readSettingsUnlocked()
-      const validated = settingsSchema.parse({ ...current, ...patch })
+      const deepgramPatch = patch.transcriptionProviderSettings?.deepgram
+      const validated = settingsSchema.parse({
+        ...current,
+        ...patch,
+        transcriptionProviderSettings: deepgramPatch
+          ? {
+              ...current.transcriptionProviderSettings,
+              deepgram: {
+                ...current.transcriptionProviderSettings.deepgram,
+                ...deepgramPatch,
+              },
+            }
+          : current.transcriptionProviderSettings,
+      })
       await this.writeJsonFileUnlocked(this.settingsPath, validated)
       return validated
     })
@@ -142,6 +183,7 @@ export default class StorageService {
       updatedAt: now.toISOString(),
       durationMs: 0,
       segments: [],
+      translations: [],
     }
     await this.writeTranscript(transcript)
     return transcript
@@ -158,6 +200,23 @@ export default class StorageService {
     const validatedSegments = segments.map((segment) => segmentSchema.parse(segment))
     await this.updateTranscript(id, (transcript) => {
       transcript.segments.push(...validatedSegments)
+      transcript.updatedAt = new Date().toISOString()
+    })
+  }
+
+  /** Adds one validated sentence translation without duplicating its source-language pair. */
+  public async appendTranslation(id: string, translation: TranslationSegment): Promise<void> {
+    const validatedTranslation = translationSchema.parse(translation)
+    await this.updateTranscript(id, (transcript) => {
+      const duplicate = transcript.translations.some(
+        (candidate) =>
+          candidate.sourceEndIndex === validatedTranslation.sourceEndIndex &&
+          candidate.provider === validatedTranslation.provider &&
+          candidate.sourceLanguage === validatedTranslation.sourceLanguage &&
+          candidate.targetLanguage === validatedTranslation.targetLanguage,
+      )
+      if (duplicate) return
+      transcript.translations.push(validatedTranslation)
       transcript.updatedAt = new Date().toISOString()
     })
   }

@@ -12,11 +12,12 @@ import {
   type TranscriptDocument,
   type TranscriptResultEvent,
   type TranscriptSummary,
+  type TranslationResultEvent,
   type UpdateStateEvent,
 } from '@shared/types'
 
 export type AppPage = 'home' | 'settings'
-export type SettingsSection = 'general' | 'transcription' | 'updates' | 'about'
+export type SettingsSection = 'general' | 'transcription' | 'translation' | 'updates' | 'about'
 
 export interface AppState {
   initialized: boolean
@@ -142,6 +143,16 @@ const appSlice = createSlice({
         state.interim[event.source] = event.text
       }
     },
+    /** Appends one live translation only to its currently displayed transcript. */
+    receiveTranslationResult(state, action: PayloadAction<TranslationResultEvent>) {
+      if (state.currentTranscript?.id !== action.payload.transcriptId) return
+      const translation = action.payload.translation
+      if (
+        !state.currentTranscript.translations.some((candidate) => candidate.id === translation.id)
+      ) {
+        state.currentTranscript.translations.push(translation)
+      }
+    },
     /** Updates the live meter for one source. */
     setAudioLevel(
       state,
@@ -164,6 +175,7 @@ export const {
   addHistorySummary,
   hydrate,
   receiveTranscriptResult,
+  receiveTranslationResult,
   removeHistorySummary,
   replaceCurrentTranscript,
   replaceHistorySummary,

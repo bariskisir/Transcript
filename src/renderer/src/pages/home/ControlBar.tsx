@@ -7,7 +7,11 @@ import { Button, Select, Switch, Tooltip } from 'antd'
 import { Languages, Mic2, MonitorSpeaker, Radio, Square } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { getDeepgramModel } from '@shared/deepgram'
-import type { AppSettings } from '@shared/types'
+import {
+  ACTIVE_TRANSLATION_TARGET_LANGUAGES,
+  type TranslationTargetLanguage,
+} from '@shared/translation'
+import type { AppSettingsPatch } from '@shared/types'
 import type AudioCaptureService from '@renderer/audio/AudioCaptureService'
 import type { AudioDevice } from '@renderer/audio/AudioCaptureService'
 import { useAppSelector } from '@renderer/store'
@@ -15,7 +19,7 @@ import styles from './ControlBar.module.scss'
 
 interface ControlBarProps {
   captureService: AudioCaptureService
-  onSettingsChange: (patch: Partial<AppSettings>) => Promise<void>
+  onSettingsChange: (patch: AppSettingsPatch) => Promise<void>
   onStart: () => Promise<void>
   onStop: () => Promise<void>
 }
@@ -37,6 +41,7 @@ const ControlBar = ({
   const stopping = session === 'stopping'
   const recording = session === 'recording'
   const canStop = session === 'connecting' || recording
+  const deepgramSettings = settings.transcriptionProviderSettings.deepgram
 
   useEffect(() => {
     const refresh = (): void => {
@@ -58,7 +63,7 @@ const ControlBar = ({
   const speakerDeviceId = speakers.some((device) => device.id === settings.speakerDeviceId)
     ? settings.speakerDeviceId
     : 'default'
-  const speechLanguages = getDeepgramModel(settings.model).languages
+  const speechLanguages = getDeepgramModel(deepgramSettings.model).languages
   const languageNames = useMemo(
     () => new Intl.DisplayNames([settings.uiLanguage, 'en'], { type: 'language' }),
     [settings.uiLanguage],
@@ -67,8 +72,11 @@ const ControlBar = ({
   /** Formats one Deepgram BCP-47 language code for the active interface locale. */
   const formatLanguage = (code: string): string => `${languageNames.of(code) ?? code} (${code})`
 
+  /** Formats one target language in the active interface locale without a technical suffix. */
+  const formatTranslationLanguage = (code: string): string => languageNames.of(code) ?? code
+
   /** Persists one partial control setting. */
-  const update = async (patch: Partial<AppSettings>): Promise<void> => {
+  const update = async (patch: AppSettingsPatch): Promise<void> => {
     await onSettingsChange(patch)
   }
 
@@ -149,15 +157,41 @@ const ControlBar = ({
         </div>
         <Select
           size="small"
-          value={settings.language}
+          value={deepgramSettings.language}
           disabled={recording || busy}
-          onChange={(language) => void update({ language })}
+          onChange={(language) =>
+            void update({ transcriptionProviderSettings: { deepgram: { language } } })
+          }
           showSearch
           optionFilterProp="label"
           options={speechLanguages.map((language) => ({
             value: language,
             label: formatLanguage(language),
           }))}
+        />
+      </div>
+
+      <div className={`${styles.sourceBlock} ${styles.enabled}`}>
+        <div className={styles.sourceHeader}>
+          <span className={`${styles.sourceIcon} ${styles.languageTone}`}>
+            <Languages size={16} />
+          </span>
+          <span className={styles.sourceName}>{t('controls.translateTo')}</span>
+        </div>
+        <Select<TranslationTargetLanguage>
+          size="small"
+          value={settings.translationTargetLanguage}
+          disabled={session === 'connecting' || session === 'stopping'}
+          onChange={(translationTargetLanguage) => void update({ translationTargetLanguage })}
+          showSearch
+          optionFilterProp="label"
+          options={[
+            { value: 'none', label: t('controls.translationNone') },
+            ...ACTIVE_TRANSLATION_TARGET_LANGUAGES.map((language) => ({
+              value: language,
+              label: formatTranslationLanguage(language),
+            })),
+          ]}
         />
       </div>
 

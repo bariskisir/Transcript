@@ -2,14 +2,15 @@
  * Manages one independent Deepgram connection per active audio source.
  */
 
-import type { AppSettings, AudioSource, TranscriptResultEvent } from '@shared/types'
+import type { DeepgramTranscriptionSettings } from '@shared/transcription'
+import type { AudioSource, TranscriptResultEvent } from '@shared/types'
 import DeepgramConnection from './DeepgramConnection'
 import type LoggerService from './LoggerService'
 
 interface StartOptions {
   sources: AudioSource[]
   apiKey: string
-  settings: AppSettings
+  settings: DeepgramTranscriptionSettings
   onResult: (event: TranscriptResultEvent) => void
   onError: (source: AudioSource, message: string) => void
 }
