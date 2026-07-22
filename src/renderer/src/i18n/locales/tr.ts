@@ -34,6 +34,8 @@ export default {
     stop: 'Kaydı durdur',
     unavailable: 'Yalnızca Windows',
     sourceHint: 'Transcript’in neyi duyacağını seçin',
+    compactView: 'Kompakt görünüm',
+    fullView: 'Tam görünüm',
   },
   transcript: {
     newTranscript: 'Yeni transkript',

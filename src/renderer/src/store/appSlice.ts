@@ -35,6 +35,7 @@ export interface AppState {
   levels: { microphone: number; speaker: number }
   update: UpdateStateEvent
   transcriptSidebarOpen: boolean
+  compactMode: boolean
 }
 
 const initialState: AppState = {
@@ -53,6 +54,7 @@ const initialState: AppState = {
   levels: { microphone: 0, speaker: 0 },
   update: { state: 'idle' },
   transcriptSidebarOpen: true,
+  compactMode: false,
 }
 
 const appSlice = createSlice({
@@ -73,6 +75,7 @@ const appSlice = createSlice({
     /** Opens a top-level application page. */
     setPage(state, action: PayloadAction<AppPage>) {
       state.page = action.payload
+      if (action.payload !== 'home') state.compactMode = false
     },
     /** Selects the settings category shown when the settings page is opened. */
     setSettingsSection(state, action: PayloadAction<SettingsSection>) {
@@ -168,6 +171,10 @@ const appSlice = createSlice({
     setTranscriptSidebarOpen(state, action: PayloadAction<boolean>) {
       state.transcriptSidebarOpen = action.payload
     },
+    /** Toggles the distraction-free workspace with title-bar recording controls. */
+    setCompactMode(state, action: PayloadAction<boolean>) {
+      state.compactMode = action.payload
+    },
   },
 })
 
@@ -188,6 +195,7 @@ export const {
   setSessionState,
   setSettings,
   setSettingsSection,
+  setCompactMode,
   setTranscriptSidebarOpen,
   setUpdateState,
 } = appSlice.actions

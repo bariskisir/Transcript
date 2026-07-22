@@ -34,6 +34,8 @@ export default {
     stop: 'Detener grabación',
     unavailable: 'Solo Windows',
     sourceHint: 'Elige lo que Transcript debe escuchar',
+    compactView: 'Vista compacta',
+    fullView: 'Vista completa',
   },
   transcript: {
     newTranscript: 'Nueva transcripción',

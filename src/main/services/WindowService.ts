@@ -23,8 +23,8 @@ export default class WindowService {
     const window = new BrowserWindow({
       width: 1180,
       height: 760,
-      minWidth: 840,
-      minHeight: 600,
+      minWidth: 450,
+      minHeight: 300,
       show: false,
       backgroundColor: '#181818',
       title: 'Transcript',

@@ -1,6 +1,6 @@
 {
   "name": "transcript",
-  "version": "3.1.2",
+  "version": "3.2.0",
   "description": "Secure real-time desktop transcription",
   "main": "./out/main/index.js",
   "author": "bariskisir",

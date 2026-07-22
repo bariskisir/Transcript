@@ -29,6 +29,8 @@ export default {
     stop: 'Aufnahme stoppen',
     unavailable: 'Nur Windows',
     sourceHint: 'Wählen Sie, was Transcript hören soll',
+    compactView: 'Kompaktansicht',
+    fullView: 'Vollansicht',
   },
   transcript: {
     newTranscript: 'Neues Transkript',

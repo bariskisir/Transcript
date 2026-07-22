@@ -29,6 +29,8 @@ export default {
     stop: '停止录音',
     unavailable: '仅限 Windows',
     sourceHint: '选择 Transcript 应听取的内容',
+    compactView: '紧凑视图',
+    fullView: '完整视图',
   },
   transcript: {
     newTranscript: '新建转写',

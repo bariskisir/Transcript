@@ -18,6 +18,7 @@ interface TranscriptViewProps {
 const TranscriptView = ({ onExport }: TranscriptViewProps): React.JSX.Element => {
   const transcript = useAppSelector((state) => state.app.currentTranscript)
   const interim = useAppSelector((state) => state.app.interim)
+  const compactMode = useAppSelector((state) => state.app.compactMode)
   const session = useAppSelector((state) => state.app.session.state)
   const settings = useAppSelector((state) => state.app.settings)
   const sourceScrollRef = useRef<HTMLDivElement>(null)
@@ -163,27 +164,29 @@ const TranscriptView = ({ onExport }: TranscriptViewProps): React.JSX.Element =>
         )}
       </div>
 
-      <footer className={styles.footer}>
-        <span className={`${styles.status} ${session === 'recording' ? styles.active : ''}`}>
-          <span className={styles.statusDot} />
-          {t(`status.${session}`)}
-        </span>
-        <span>{t('transcript.segments', { count: transcript?.segments.length ?? 0 })}</span>
-        <span className={styles.footerSpacer} />
-        {transcript && transcript.segments.length > 0 && (
-          <Dropdown
-            menu={{
-              items: exportItems,
-              onClick: ({ key }) => void onExport(transcript.id, key as TranscriptFormat),
-            }}
-            trigger={['click']}
-          >
-            <Button type="text" size="small" icon={<Download size={14} />}>
-              {t('transcript.export')}
-            </Button>
-          </Dropdown>
-        )}
-      </footer>
+      {!compactMode && (
+        <footer className={styles.footer}>
+          <span className={`${styles.status} ${session === 'recording' ? styles.active : ''}`}>
+            <span className={styles.statusDot} />
+            {t(`status.${session}`)}
+          </span>
+          <span>{t('transcript.segments', { count: transcript?.segments.length ?? 0 })}</span>
+          <span className={styles.footerSpacer} />
+          {transcript && transcript.segments.length > 0 && (
+            <Dropdown
+              menu={{
+                items: exportItems,
+                onClick: ({ key }) => void onExport(transcript.id, key as TranscriptFormat),
+              }}
+              trigger={['click']}
+            >
+              <Button type="text" size="small" icon={<Download size={14} />}>
+                {t('transcript.export')}
+              </Button>
+            </Dropdown>
+          )}
+        </footer>
+      )}
     </section>
   )
 }

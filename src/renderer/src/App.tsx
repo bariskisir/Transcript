@@ -22,6 +22,7 @@ const App = (): React.JSX.Element => {
   useAppInit()
   const initialized = useAppSelector((state) => state.app.initialized)
   const page = useAppSelector((state) => state.app.page)
+  const compactMode = useAppSelector((state) => state.app.compactMode)
   const update = useAppSelector((state) => state.app.update)
   const desktopActions = useDesktopActions()
   const settingsActions = useSettingsActions()
@@ -40,7 +41,7 @@ const App = (): React.JSX.Element => {
     <div className={styles.shell}>
       <Titlebar />
       <div className={styles.body}>
-        <AppSidebar onSettingsChange={settingsActions.saveSettings} />
+        {!compactMode && <AppSidebar onSettingsChange={settingsActions.saveSettings} />}
         <div className={styles.workspace}>
           {page === 'home' ? (
             <HomePage />
