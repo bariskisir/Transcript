@@ -2,9 +2,9 @@
  * Renders source and translated live transcripts with sentence-level hover correspondence.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Dropdown, type MenuProps } from 'antd'
-import { AudioLines, Download, Languages } from 'lucide-react'
+import { AudioLines, Download, GripHorizontal, Languages } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { TRANSCRIPT_FORMATS, type TranscriptFormat } from '@shared/types'
 import { useAppSelector } from '@renderer/store'
@@ -23,8 +23,34 @@ const TranscriptView = ({ onExport }: TranscriptViewProps): React.JSX.Element =>
   const settings = useAppSelector((state) => state.app.settings)
   const sourceScrollRef = useRef<HTMLDivElement>(null)
   const translationScrollRef = useRef<HTMLDivElement>(null)
+  const panesRef = useRef<HTMLDivElement>(null)
   const [hoveredTranslationId, setHoveredTranslationId] = useState<string | null>(null)
+  const [splitRatio, setSplitRatio] = useState(0.5)
+  const dragging = useRef(false)
   const { t } = useTranslation()
+
+  const handleDividerMouseDown = useCallback((event: React.MouseEvent): void => {
+    event.preventDefault()
+    dragging.current = true
+    const onMove = (moveEvent: MouseEvent): void => {
+      if (!dragging.current || !panesRef.current) return
+      const rect = panesRef.current.getBoundingClientRect()
+      const offset = moveEvent.clientY - rect.top
+      const ratio = Math.max(0.15, Math.min(0.85, offset / rect.height))
+      setSplitRatio(ratio)
+    }
+    const onUp = (): void => {
+      dragging.current = false
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+    document.body.style.cursor = 'row-resize'
+    document.body.style.userSelect = 'none'
+  }, [])
   const finalText = useMemo(
     () =>
       transcript?.segments
@@ -102,8 +128,12 @@ const TranscriptView = ({ onExport }: TranscriptViewProps): React.JSX.Element =>
 
   return (
     <section className={styles.container}>
-      <div className={styles.panes}>
-        <div ref={sourceScrollRef} className={`${styles.scrollArea} selectable`}>
+      <div ref={panesRef} className={styles.panes}>
+        <div
+          ref={sourceScrollRef}
+          className={`${styles.scrollArea} selectable`}
+          style={{ flex: splitRatio }}
+        >
           {!hasContent ? (
             <div className={styles.emptyState}>
               <div className={styles.emptyIcon}>
@@ -131,13 +161,20 @@ const TranscriptView = ({ onExport }: TranscriptViewProps): React.JSX.Element =>
 
         {translationEnabled && (
           <>
-            <div className={styles.translationDivider}>
+            <button
+              type="button"
+              className={styles.translationDivider}
+              aria-label={t('transcript.translationTo', { language: targetLanguageName })}
+              onMouseDown={handleDividerMouseDown}
+            >
+              <GripHorizontal size={12} />
               <Languages size={13} />
               <span>{t('transcript.translationTo', { language: targetLanguageName })}</span>
-            </div>
+            </button>
             <div
               ref={translationScrollRef}
               className={`${styles.scrollArea} ${styles.translationPane} selectable`}
+              style={{ flex: `${1 - splitRatio}` }}
             >
               {translations.length === 0 ? (
                 <div className={styles.translationEmpty}>{t('transcript.translationWaiting')}</div>

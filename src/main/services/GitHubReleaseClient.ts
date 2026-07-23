@@ -6,10 +6,11 @@ import { createHash } from 'node:crypto'
 import { mkdir, open, unlink } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import { z } from 'zod'
+import { APP_REPO } from '@shared/appInfo'
 
-const RELEASES_API_URL = 'https://api.github.com/repos/bariskisir/transcript/releases/latest'
+const RELEASES_API_URL = `https://api.github.com/repos/${APP_REPO}/releases/latest`
 const GITHUB_ORIGIN = 'https://github.com'
-const RELEASE_DOWNLOAD_PATH_PREFIX = '/bariskisir/transcript/releases/download/'
+const RELEASE_DOWNLOAD_PATH_PREFIX = `/${APP_REPO}/releases/download/`
 const RELEASE_CACHE_DURATION_MS = 5 * 60 * 1_000
 const REQUEST_TIMEOUT_MS = 10 * 60 * 1_000
 

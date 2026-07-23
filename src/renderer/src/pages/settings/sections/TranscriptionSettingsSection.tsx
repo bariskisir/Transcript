@@ -4,7 +4,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { Button, Input, InputNumber, Select, Space, Switch, Tag } from 'antd'
-import { ExternalLink, KeyRound, ShieldCheck } from 'lucide-react'
+import { ExternalLink, KeyRound, Save, ShieldCheck, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import {
   DEEPGRAM_DIARIZATION_MODES,
@@ -21,6 +21,7 @@ import {
 import { useDesktopActions } from '@renderer/hooks/useDesktopActions'
 import { useSettingsActions } from '@renderer/hooks/useSettingsActions'
 import { useAppSelector } from '@renderer/store'
+import { useTheme } from '@renderer/context/ThemeProvider'
 import SettingLabel from '../components/SettingLabel'
 import styles from '../SettingsPage.module.scss'
 
@@ -37,6 +38,8 @@ const DeepgramSettingsSection = (): React.JSX.Element => {
   const refreshApiBalance = settingsActions.refreshApiBalance
   const { t } = useTranslation()
   const selectedModel = getDeepgramModel(deepgramSettings.model)
+  const { theme } = useTheme()
+  const light = theme === 'light'
   const languageNames = useMemo(
     () => new Intl.DisplayNames([settings.uiLanguage, 'en'], { type: 'language' }),
     [settings.uiLanguage],
@@ -145,18 +148,46 @@ const DeepgramSettingsSection = (): React.JSX.Element => {
             {t('settings.getApiKey')}
           </Button>
         </div>
-        <div className={styles.settingRow}>
+        <div className={`${styles.settingRow} ${styles.credentialRow}`}>
           <SettingLabel
             title={t('settings.apiKey')}
             description={t('settings.apiKeyDescription')}
           />
-          <div className={`${styles.settingControl} ${styles.apiKeyControl}`}>
-            <Tag
-              color={hasApiKey ? 'success' : 'warning'}
-              icon={hasApiKey ? <ShieldCheck size={12} /> : <KeyRound size={12} />}
+          <Tag
+            color={hasApiKey ? 'success' : 'warning'}
+            icon={hasApiKey ? <ShieldCheck size={12} /> : <KeyRound size={12} />}
+          >
+            {t(hasApiKey ? 'settings.apiKeyConnected' : 'settings.apiKeyMissing')}
+          </Tag>
+          <Input.Password
+            className={styles.flexControl}
+            value={apiKey}
+            visibilityToggle
+            placeholder={t('settings.apiKeyPlaceholder')}
+            onChange={(event) => setApiKey(event.target.value)}
+            onPressEnter={() => void handleSaveKey()}
+          />
+          <div className={styles.settingControl}>
+            {hasApiKey && (
+              <Button
+                danger
+                {...(!light ? { type: 'primary' as const } : {})}
+                icon={<Trash2 size={14} />}
+                onClick={() => void handleDeleteKey()}
+              >
+                {t('common.delete')}
+              </Button>
+            )}
+            <Button
+              type="primary"
+              {...(light ? { ghost: true } : {})}
+              loading={savingKey}
+              disabled={!apiKey.trim()}
+              icon={<Save size={14} />}
+              onClick={() => void handleSaveKey()}
             >
-              {t(hasApiKey ? 'settings.apiKeyConnected' : 'settings.apiKeyMissing')}
-            </Tag>
+              {t('common.save')}
+            </Button>
           </div>
         </div>
         {balanceText && (
@@ -168,31 +199,6 @@ const DeepgramSettingsSection = (): React.JSX.Element => {
             <strong className={styles.balanceValue}>{balanceText}</strong>
           </div>
         )}
-        <div className={`${styles.settingRow} ${styles.credentialRow}`}>
-          <Input.Password
-            className={styles.flexControl}
-            value={apiKey}
-            visibilityToggle
-            placeholder={t('settings.apiKeyPlaceholder')}
-            onChange={(event) => setApiKey(event.target.value)}
-            onPressEnter={() => void handleSaveKey()}
-          />
-          <div className={styles.settingControl}>
-            {hasApiKey && (
-              <Button danger onClick={() => void handleDeleteKey()}>
-                {t('settings.removeApiKey')}
-              </Button>
-            )}
-            <Button
-              type="primary"
-              loading={savingKey}
-              disabled={!apiKey.trim()}
-              onClick={() => void handleSaveKey()}
-            >
-              {t('settings.saveApiKey')}
-            </Button>
-          </div>
-        </div>
       </section>
 
       <h2 className={styles.groupTitle}>{t('settings.recognition')}</h2>

@@ -1,10 +1,11 @@
 /**
- * Renders application identity, author, repository, license, and support links.
+ * Renders application identity, author, repository, and support links.
  */
 
 import { Button, Tag } from 'antd'
-import { ExternalLink, FileClock } from 'lucide-react'
+import { ExternalLink } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { APP_AUTHOR, APP_AUTHOR_URL, APP_REPO, APP_REPO_URL } from '@shared/appInfo'
 import logoUrl from '../../../../../../build/icon.svg'
 import { useDesktopActions } from '@renderer/hooks/useDesktopActions'
 import { useAppSelector } from '@renderer/store'
@@ -28,54 +29,19 @@ const AboutSettingsSection = (): React.JSX.Element => {
       </div>
       <section className={styles.settingGroup}>
         <div className={styles.settingRow}>
-          <div className={styles.settingLabel}>
-            <strong>{t('settings.author')}</strong>
-            <button
-              type="button"
-              className={styles.authorLink}
-              onClick={() => void desktopActions.openExternal('https://www.bariskisir.com')}
-            >
-              Barış Kısır
-            </button>
-          </div>
-        </div>
-        <div className={styles.settingRow}>
-          <SettingLabel title={t('settings.repository')} description="bariskisir/transcript" />
+          <SettingLabel title={t('settings.author')} description={APP_AUTHOR} />
           <Button
             type="text"
             icon={<ExternalLink size={14} />}
-            onClick={() =>
-              void desktopActions.openExternal('https://github.com/bariskisir/transcript')
-            }
+            onClick={() => void desktopActions.openExternal(APP_AUTHOR_URL)}
           />
         </div>
         <div className={styles.settingRow}>
-          <SettingLabel title={t('settings.license')} description={t('settings.privacy')} />
-        </div>
-        <div className={styles.settingRow}>
-          <SettingLabel
-            title={t('settings.deepgramDocumentation')}
-            description={t('settings.deepgramDocumentationDescription')}
-          />
+          <SettingLabel title={t('settings.sourceCode')} description={APP_REPO} />
           <Button
             type="text"
             icon={<ExternalLink size={14} />}
-            onClick={() =>
-              void desktopActions.openExternal(
-                'https://developers.deepgram.com/docs/models-languages-overview',
-              )
-            }
-          />
-        </div>
-        <div className={styles.settingRow}>
-          <SettingLabel
-            title={t('settings.logFiles')}
-            description={t('settings.logFilesDescription')}
-          />
-          <Button
-            type="text"
-            icon={<FileClock size={14} />}
-            onClick={() => void desktopActions.openLogsDirectory()}
+            onClick={() => void desktopActions.openExternal(APP_REPO_URL)}
           />
         </div>
       </section>

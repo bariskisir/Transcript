@@ -2,12 +2,13 @@
  * Renders the reusable settings shell and delegates each category to an isolated section.
  */
 
-import { AudioLines, Info, Languages, RefreshCw, Settings2 } from 'lucide-react'
+import { AudioLines, Info, Languages, RefreshCw, ScrollText, Settings2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
 import { setSettingsSection, type SettingsSection } from '@renderer/store/appSlice'
 import AboutSettingsSection from './sections/AboutSettingsSection'
 import GeneralSettingsSection from './sections/GeneralSettingsSection'
+import LoggingSettingsSection from './sections/LoggingSettingsSection'
 import TranscriptionSettingsSection from './sections/TranscriptionSettingsSection'
 import TranslationSettingsSection from './sections/TranslationSettingsSection'
 import UpdatesSettingsSection from './sections/UpdatesSettingsSection'
@@ -35,6 +36,7 @@ const SettingsPage = (): React.JSX.Element => {
       icon: <Languages size={17} />,
     },
     { key: 'updates', label: t('settings.updates'), icon: <RefreshCw size={17} /> },
+    { key: 'logging', label: t('settings.logging'), icon: <ScrollText size={17} /> },
     { key: 'about', label: t('settings.about'), icon: <Info size={17} /> },
   ]
 
@@ -43,6 +45,7 @@ const SettingsPage = (): React.JSX.Element => {
     if (section === 'transcription') return <TranscriptionSettingsSection />
     if (section === 'translation') return <TranslationSettingsSection />
     if (section === 'updates') return <UpdatesSettingsSection />
+    if (section === 'logging') return <LoggingSettingsSection />
     if (section === 'about') return <AboutSettingsSection />
     return <GeneralSettingsSection />
   }

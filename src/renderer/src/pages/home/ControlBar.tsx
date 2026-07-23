@@ -12,6 +12,7 @@ import type { AppSettingsPatch } from '@shared/types'
 import type AudioCaptureService from '@renderer/audio/AudioCaptureService'
 import type { AudioDevice } from '@renderer/audio/AudioCaptureService'
 import { useAppSelector } from '@renderer/store'
+import { useTheme } from '@renderer/context/ThemeProvider'
 import styles from './ControlBar.module.scss'
 
 interface ControlBarProps {
@@ -34,6 +35,8 @@ const ControlBar = ({
   const levels = useAppSelector((state) => state.app.levels)
   const [devices, setDevices] = useState<AudioDevice[]>([])
   const { t } = useTranslation()
+  const { theme } = useTheme()
+  const light = theme === 'light'
   const busy = session !== 'idle'
   const stopping = session === 'stopping'
   const recording = session === 'recording'
@@ -200,8 +203,9 @@ const ControlBar = ({
 
       <Button
         className={styles.recordButton ?? ''}
-        type="primary"
-        danger={recording}
+        {...(light && canStop
+          ? { danger: true as const }
+          : { type: 'primary' as const, danger: canStop, ...(light ? { ghost: true as const } : {}) })}
         loading={stopping}
         icon={canStop ? <Square size={14} fill="currentColor" /> : <Radio size={17} />}
         onClick={() => void (canStop ? onStop() : onStart())}

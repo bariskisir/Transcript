@@ -3,11 +3,19 @@
  */
 
 import { Button, Tooltip } from 'antd'
-import { PanelLeftClose, PanelRightClose, PanelTopClose, PanelTopOpen } from 'lucide-react'
+import {
+  PanelLeftClose,
+  PanelRightClose,
+  PanelTopClose,
+  PanelTopOpen,
+  Radio,
+  Square,
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import logoUrl from '../../../../../build/icon.svg'
 import { useRecordingActions } from '@renderer/hooks/useRecordingActions'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
+import { useTheme } from '@renderer/context/ThemeProvider'
 import { setCompactMode, setPage, setTranscriptSidebarOpen } from '@renderer/store/appSlice'
 import styles from './Titlebar.module.scss'
 
@@ -19,6 +27,8 @@ const Titlebar = (): React.JSX.Element => {
   const compactMode = useAppSelector((state) => state.app.compactMode)
   const session = useAppSelector((state) => state.app.session.state)
   const { t } = useTranslation()
+  const { theme } = useTheme()
+  const light = theme === 'light'
   const recordingActions = useRecordingActions()
   const stopping = session === 'stopping'
   const recording = session === 'recording'
@@ -55,7 +65,7 @@ const Titlebar = (): React.JSX.Element => {
             >
               <Button
                 className={styles.titleButton ?? ''}
-                type={compactMode ? 'primary' : 'text'}
+                type="text"
                 icon={compactMode ? <PanelTopOpen size={18} /> : <PanelTopClose size={18} />}
                 onClick={() => dispatch(setCompactMode(!compactMode))}
               />
@@ -65,11 +75,17 @@ const Titlebar = (): React.JSX.Element => {
         {compactMode && (
           <Button
             className={styles.miniAction ?? ''}
-            type="primary"
-            danger={canStop}
+            {...(light && canStop
+              ? { danger: true as const }
+              : {
+                  type: 'primary' as const,
+                  danger: canStop,
+                  ...(light ? { ghost: true as const } : {}),
+                })}
             size="small"
             loading={stopping}
             disabled={stopping}
+            icon={canStop ? <Square size={12} fill="currentColor" /> : <Radio size={14} />}
             onClick={() =>
               void (canStop ? recordingActions.stopRecording() : recordingActions.startRecording())
             }

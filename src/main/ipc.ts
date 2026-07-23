@@ -5,6 +5,7 @@
 import { writeFile } from 'node:fs/promises'
 import { app, dialog, ipcMain, shell, type BrowserWindow, type WebContents } from 'electron'
 import { IpcChannel } from '@shared/IpcChannel'
+import { APP_AUTHOR_URL } from '@shared/appInfo'
 import { TRANSLATION_PROVIDERS, TRANSLATION_TARGET_LANGUAGES } from '@shared/translation'
 import {
   AUDIO_SOURCES,
@@ -55,7 +56,7 @@ const TRUSTED_EXTERNAL_ORIGINS = new Set([
   'https://console.deepgram.com',
   'https://developers.deepgram.com',
   'https://github.com',
-  'https://www.bariskisir.com',
+  APP_AUTHOR_URL,
 ])
 
 interface IpcServices {
