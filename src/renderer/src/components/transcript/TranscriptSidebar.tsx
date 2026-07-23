@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { Button, Dropdown, Empty, Input, Modal, Tooltip, type MenuProps } from 'antd'
 import { FileText, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { useTheme } from '@renderer/context/ThemeProvider'
 import type { TranscriptSummary } from '@shared/types'
 import { useTranscriptHistoryActions } from '@renderer/hooks/useTranscriptHistoryActions'
 import { useAppSelector } from '@renderer/store'
@@ -21,6 +22,8 @@ const TranscriptSidebar = (): React.JSX.Element => {
   const sidebarOpen = useAppSelector((state) => state.app.transcriptSidebarOpen)
   const actions = useTranscriptHistoryActions()
   const { t } = useTranslation()
+  const { theme } = useTheme()
+  const light = theme === 'light'
   const recordingActive = session !== 'idle'
   const [renameTarget, setRenameTarget] = useState<TranscriptSummary | null>(null)
   const [renameValue, setRenameValue] = useState('')
@@ -158,7 +161,10 @@ const TranscriptSidebar = (): React.JSX.Element => {
         okText={t('common.rename')}
         cancelText={t('common.cancel')}
         confirmLoading={renaming}
-        okButtonProps={{ disabled: !renameValue.trim() }}
+        okButtonProps={{
+          disabled: !renameValue.trim(),
+          ...(light ? { ghost: true as const } : {}),
+        }}
         onOk={() => void commitRename()}
         onCancel={() => setRenameTarget(null)}
         destroyOnHidden

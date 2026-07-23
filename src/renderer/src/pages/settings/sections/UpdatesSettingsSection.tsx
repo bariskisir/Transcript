@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next'
 import type { UpdateStateEvent } from '@shared/types'
 import { useDesktopActions } from '@renderer/hooks/useDesktopActions'
 import { useSettingsActions } from '@renderer/hooks/useSettingsActions'
+import { useTheme } from '@renderer/context/ThemeProvider'
 import { useAppSelector } from '@renderer/store'
 import SettingLabel from '../components/SettingLabel'
 import styles from '../SettingsPage.module.scss'
@@ -37,6 +38,8 @@ const UpdatesSettingsSection = (): React.JSX.Element => {
   const desktopActions = useDesktopActions()
   const updateStatus = useUpdateStatus(update)
   const { t } = useTranslation()
+  const { theme } = useTheme()
+  const light = theme === 'light'
 
   return (
     <div className={styles.settingContainer}>
@@ -58,7 +61,11 @@ const UpdatesSettingsSection = (): React.JSX.Element => {
           <SettingLabel title={updateStatus} description={t('settings.version', { version })} />
           <div className={styles.settingControl}>
             {update.state === 'downloaded' ? (
-              <Button type="primary" onClick={() => void desktopActions.installUpdate()}>
+              <Button
+                type="primary"
+                {...(light ? { ghost: true as const } : {})}
+                onClick={() => void desktopActions.installUpdate()}
+              >
                 {t('settings.installNow')}
               </Button>
             ) : (

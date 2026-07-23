@@ -93,7 +93,7 @@ export default {
     logLevelDescription: 'Yerel olarak kaydedilecek tanılama ayrıntısı miktarını seçin.',
     logFiles: 'Günlük dosyaları',
     logFilesDescription: 'Uygulama verileri klasöründe tutulan dönen tanılama dosyaları.',
-    openLogs: 'Günlük klasörünü aç',
+    openLogs: 'Aç',
     logLevels: {
       error: 'Yalnızca hatalar',
       warn: 'Uyarılar',
@@ -153,7 +153,7 @@ export default {
     checkUpdatesOnStartup: 'Başlangıçta güncellemeleri denetle',
     checkUpdatesOnStartupDescription:
       'Transcript açıldığında GitHub’da yeni sürüm olup olmadığını denetler.',
-    checkUpdates: 'Güncellemeleri denetle',
+    checkUpdates: 'Denetle',
     checking: 'Güncellemeler denetleniyor…',
     upToDate: 'En güncel sürümü kullanıyorsunuz.',
     updateAvailable: '{{version}} sürümü kullanılabilir.',

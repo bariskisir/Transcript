@@ -94,7 +94,7 @@ export default {
     logLevelDescription: 'Elige cuánto detalle de diagnóstico se guarda localmente.',
     logFiles: 'Archivos de registro',
     logFilesDescription: 'Archivos de diagnóstico rotativos en la carpeta de datos.',
-    openLogs: 'Abrir carpeta de registros',
+    openLogs: 'Abrir',
     logLevels: {
       error: 'Solo errores',
       warn: 'Advertencias',
@@ -154,7 +154,7 @@ export default {
     mipOptOutDescription: 'Solicita que Deepgram no conserve datos para mejorar modelos.',
     checkUpdatesOnStartup: 'Buscar actualizaciones al iniciar',
     checkUpdatesOnStartupDescription: 'Buscar una nueva versión en GitHub al iniciar Transcript.',
-    checkUpdates: 'Buscar actualizaciones',
+    checkUpdates: 'Verificar',
     checking: 'Buscando actualizaciones…',
     upToDate: 'Estás usando la última versión.',
     updateAvailable: 'La versión {{version}} está disponible.',

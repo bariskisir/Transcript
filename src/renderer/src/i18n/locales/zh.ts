@@ -88,7 +88,7 @@ export default {
     logLevelDescription: '选择在本地保存的诊断详细程度。',
     logFiles: '日志文件',
     logFilesDescription: '存储在应用数据目录中的滚动诊断文件。',
-    openLogs: '打开日志目录',
+    openLogs: '打开',
     logLevels: {
       error: '仅错误',
       warn: '警告',
@@ -147,7 +147,7 @@ export default {
     mipOptOutDescription: '请求 Deepgram 不为模型改进保留数据。',
     checkUpdatesOnStartup: '启动时检查更新',
     checkUpdatesOnStartupDescription: 'Transcript 启动时在 GitHub 上检查新版本。',
-    checkUpdates: '检查更新',
+    checkUpdates: '检查',
     checking: '正在检查更新…',
     upToDate: '您正在使用最新版本。',
     updateAvailable: '版本 {{version}} 可用。',

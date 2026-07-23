@@ -5,6 +5,7 @@
 import { Button, Tooltip } from 'antd'
 import { Monitor, Moon, Pin, Settings, Sun } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { useTheme } from '@renderer/context/ThemeProvider'
 import type { AppSettingsPatch, ThemeMode } from '@shared/types'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
 import { setPage } from '@renderer/store/appSlice'
@@ -26,6 +27,8 @@ const AppSidebar = ({ onSettingsChange }: AppSidebarProps): React.JSX.Element =>
   const page = useAppSelector((state) => state.app.page)
   const settings = useAppSelector((state) => state.app.settings)
   const { t } = useTranslation()
+  const { theme } = useTheme()
+  const light = theme === 'light'
 
   /** Persists a global setting from the sidebar. */
   const update = async (patch: AppSettingsPatch): Promise<void> => {
@@ -45,7 +48,9 @@ const AppSidebar = ({ onSettingsChange }: AppSidebarProps): React.JSX.Element =>
         <Tooltip placement="right" title={t('settings.alwaysOnTop')}>
           <Button
             className={styles.sidebarButton ?? ''}
-            type={settings.alwaysOnTop ? 'primary' : 'text'}
+            {...(settings.alwaysOnTop
+              ? { type: 'primary' as const, ...(light ? { ghost: true as const } : {}) }
+              : { type: 'text' as const })}
             icon={<Pin size={18} />}
             onClick={() => void update({ alwaysOnTop: !settings.alwaysOnTop })}
           />
@@ -61,7 +66,9 @@ const AppSidebar = ({ onSettingsChange }: AppSidebarProps): React.JSX.Element =>
         <Tooltip placement="right" title={t('nav.settings')}>
           <Button
             className={styles.sidebarButton ?? ''}
-            type={page === 'settings' ? 'primary' : 'text'}
+            {...(page === 'settings'
+              ? { type: 'primary' as const, ...(light ? { ghost: true as const } : {}) }
+              : { type: 'text' as const })}
             icon={<Settings size={18} />}
             onClick={() => dispatch(setPage('settings'))}
           />

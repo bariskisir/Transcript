@@ -89,7 +89,7 @@ export default {
     logLevelDescription: 'Choisissez la quantité de détails de diagnostic enregistrés localement.',
     logFiles: 'Fichiers journaux',
     logFilesDescription: 'Fichiers de diagnostic rotatifs dans le dossier de données.',
-    openLogs: 'Ouvrir le dossier des journaux',
+    openLogs: 'Ouvrir',
     logLevels: {
       error: 'Erreurs uniquement',
       warn: 'Avertissements',
@@ -150,7 +150,7 @@ export default {
     checkUpdatesOnStartup: 'Rechercher les mises à jour au démarrage',
     checkUpdatesOnStartupDescription:
       'Rechercher une nouvelle version sur GitHub au démarrage de Transcript.',
-    checkUpdates: 'Rechercher des mises à jour',
+    checkUpdates: 'Vérifier',
     checking: 'Recherche de mises à jour…',
     upToDate: 'Vous utilisez la dernière version.',
     updateAvailable: 'La version {{version}} est disponible.',

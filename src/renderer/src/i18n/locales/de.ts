@@ -89,7 +89,7 @@ export default {
     logLevelDescription: 'Legt fest, wie viele Diagnosedetails lokal gespeichert werden.',
     logFiles: 'Protokolldateien',
     logFilesDescription: 'Rotierende Diagnosedateien im Anwendungsdatenordner.',
-    openLogs: 'Protokollordner öffnen',
+    openLogs: 'Öffnen',
     logLevels: {
       error: 'Nur Fehler',
       warn: 'Warnungen',
@@ -151,7 +151,7 @@ export default {
     checkUpdatesOnStartup: 'Beim Start nach Updates suchen',
     checkUpdatesOnStartupDescription:
       'Beim Start von Transcript auf GitHub nach einer neuen Version suchen.',
-    checkUpdates: 'Nach Updates suchen',
+    checkUpdates: 'Prüfen',
     checking: 'Suche nach Updates…',
     upToDate: 'Sie verwenden die neueste Version.',
     updateAvailable: 'Version {{version}} ist verfügbar.',
