@@ -16,7 +16,7 @@ export default {
     confirm: 'Confirmar',
     later: 'Mais tarde',
   },
-  nav: { transcript: 'Transcrição', history: 'Histórico', settings: 'Definições' },
+  nav: { sessions: 'Sessões', settings: 'Definições' },
   status: { idle: 'Pronto', connecting: 'A ligar', recording: 'A ouvir', stopping: 'A concluir' },
   controls: {
     microphone: 'Microfone',
@@ -35,8 +35,6 @@ export default {
   transcript: {
     newTranscript: 'Nova transcrição',
     renameTranscript: 'Renomear transcrição',
-    showSidebar: 'Mostrar painel de transcrições',
-    hideSidebar: 'Ocultar painel de transcrições',
     emptyTitle: 'A sua transcrição aparecerá aqui',
     emptyDescription: 'Ative uma fonte de áudio, escolha um idioma e comece.',
     translationTo: 'Tradução · {{language}}',
@@ -51,11 +49,19 @@ export default {
     exported: 'Transcrição exportada',
     copied: 'Copiado para a área de transferência',
   },
-  history: {
-    title: 'Histórico de transcrições',
-    emptyTitle: 'Ainda não há transcrições',
-    emptyDescription: 'As sessões concluídas são guardadas localmente.',
+  sessions: {
+    newSession: 'Nova sessão',
+    renameSession: 'Renomear sessão',
+    emptyTitle: 'Ainda não há sessões',
+    emptyDescription: 'As sessões concluídas são guardadas localmente e aparecerão aqui.',
+    exportTxt: 'Exportar como TXT',
+    exportJson: 'Exportar como JSON',
+    exportTxtAll: 'Exportar todos como TXT',
+    exportJsonAll: 'Exportar todos como JSON',
+    deleteAll: 'Eliminar todos',
+    exportAll: 'Exportar todos',
   },
+  sidebar: { showSidebar: 'Mostrar barra lateral', hideSidebar: 'Ocultar barra lateral' },
   settings: {
     title: 'Definições',
     general: 'Geral',

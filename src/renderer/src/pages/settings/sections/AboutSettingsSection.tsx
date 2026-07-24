@@ -25,7 +25,7 @@ const AboutSettingsSection = (): React.JSX.Element => {
         <img src={logoUrl} alt="" />
         <h2>{t('app.name')}</h2>
         <p>{t('app.tagline')}</p>
-        <Tag>{t('settings.version', { version })}</Tag>
+        <Tag>v{version}</Tag>
       </div>
       <section className={styles.settingGroup}>
         <div className={styles.settingRow}>

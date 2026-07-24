@@ -14,14 +14,14 @@ export const AUDIO_SOURCES = ['microphone', 'speaker'] as const
 export const APP_LOCALES = ['en', 'tr', 'de', 'fr', 'pt', 'zh', 'es'] as const
 export const THEME_MODES = ['system', 'light', 'dark'] as const
 export const TIME_FORMATS = ['24-hour', '12-hour'] as const
-export const TRANSCRIPT_FORMATS = ['txt', 'json'] as const
+export const SESSION_FORMATS = ['txt', 'json'] as const
 export const LOG_LEVELS = ['error', 'warn', 'info', 'debug', 'verbose'] as const
 
 export type AudioSource = (typeof AUDIO_SOURCES)[number]
 export type AppLocale = (typeof APP_LOCALES)[number]
 export type ThemeMode = (typeof THEME_MODES)[number]
 export type TimeFormat = (typeof TIME_FORMATS)[number]
-export type TranscriptFormat = (typeof TRANSCRIPT_FORMATS)[number]
+export type SessionFormat = (typeof SESSION_FORMATS)[number]
 export type LogLevel = (typeof LOG_LEVELS)[number]
 export type DesktopPlatform = 'win32' | 'darwin' | 'linux'
 
@@ -94,7 +94,7 @@ export interface TranslationSegment {
   createdAt: string
 }
 
-export interface TranscriptDocument {
+export interface SessionDocument {
   id: string
   title: string
   isDefaultTitle: boolean
@@ -106,7 +106,7 @@ export interface TranscriptDocument {
   translations: TranslationSegment[]
 }
 
-export interface TranscriptSummary {
+export interface SessionSummary {
   id: string
   title: string
   isDefaultTitle: boolean
@@ -120,8 +120,8 @@ export interface TranscriptSummary {
 
 export interface BootstrapPayload {
   settings: AppSettings
-  transcripts: TranscriptSummary[]
-  currentTranscript: TranscriptDocument
+  sessions: SessionSummary[]
+  currentSession: SessionDocument
   hasApiKey: boolean
   platform: DesktopPlatform
   version: string
@@ -134,13 +134,13 @@ export interface StartSessionRequest {
 }
 
 export interface StartSessionResult {
-  transcript: TranscriptDocument
+  session: SessionDocument
   activeSources: AudioSource[]
 }
 
-export interface DeleteTranscriptResult {
+export interface DeleteSessionResult {
   deleted: boolean
-  replacement?: TranscriptDocument
+  replacement?: SessionDocument
 }
 
 export interface DeepgramBalance {
@@ -191,7 +191,7 @@ export interface UpdateStateEvent {
 }
 
 export interface TranscriptApi {
-  /** Loads persisted settings, history, and application metadata. */
+  /** Loads persisted settings, session list, and application metadata. */
   bootstrap(): Promise<BootstrapPayload>
   /** Atomically merges and persists validated application settings fields. */
   saveSettings(patch: AppSettingsPatch): Promise<AppSettings>
@@ -206,28 +206,28 @@ export interface TranscriptApi {
   /** Starts a new source-separated transcription session. */
   startSession(request: StartSessionRequest): Promise<StartSessionResult>
   /** Flushes and stops the active transcription session. */
-  stopSession(): Promise<TranscriptDocument | null>
+  stopSession(): Promise<SessionDocument | null>
   /** Sends one source-specific PCM16 audio frame. */
   sendAudio(source: AudioSource, samples: ArrayBuffer): void
-  /** Creates and persists one empty transcript workspace. */
-  createTranscript(language: string): Promise<TranscriptDocument>
-  /** Loads one complete transcript. */
-  getTranscript(id: string): Promise<TranscriptDocument>
-  /** Renames one transcript and returns the updated document. */
-  renameTranscript(id: string, title: string): Promise<TranscriptDocument>
-  /** Deletes one transcript while preserving the last-workspace invariant. */
-  deleteTranscript(id: string): Promise<DeleteTranscriptResult>
-  /** Changes a transcript's live provider/target and schedules its existing text for translation. */
-  translateTranscript(
+  /** Creates and persists one empty session workspace. */
+  createSession(language: string): Promise<SessionDocument>
+  /** Loads one complete session. */
+  getSession(id: string): Promise<SessionDocument>
+  /** Renames one session and returns the updated document. */
+  renameSession(id: string, title: string): Promise<SessionDocument>
+  /** Deletes one session while preserving the last-workspace invariant. */
+  deleteSession(id: string): Promise<DeleteSessionResult>
+  /** Changes a session's live provider/target and schedules its existing text for translation. */
+  translateSession(
     id: string,
     enabled: boolean,
     provider: TranslationProvider,
     targetLanguage: TranslationTargetLanguage,
   ): Promise<void>
-  /** Exports a transcript through a native save dialog. */
-  exportTranscript(
+  /** Exports a session through a native save dialog. */
+  exportSession(
     id: string,
-    format: TranscriptFormat,
+    format: SessionFormat,
     dialogTitle: string,
     includeTranslation: boolean,
     provider: TranslationProvider,

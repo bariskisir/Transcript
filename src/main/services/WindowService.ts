@@ -18,7 +18,7 @@ export default class WindowService {
     return this.mainWindow && !this.mainWindow.isDestroyed() ? this.mainWindow : null
   }
 
-  /** Creates and loads a hardened Transcript desktop window. */
+  /** Creates and loads a hardened desktop window. */
   public async createWindow(logger: LoggerService): Promise<BrowserWindow> {
     const window = new BrowserWindow({
       width: 1180,
@@ -37,7 +37,7 @@ export default class WindowService {
         sandbox: true,
         webSecurity: true,
         devTools: !app.isPackaged,
-        partition: 'transcript-session',
+        partition: `${app.name}-session`,
       },
     })
     this.mainWindow = window

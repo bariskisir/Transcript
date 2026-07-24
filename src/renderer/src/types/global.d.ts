@@ -6,6 +6,6 @@ import type { TranscriptApi } from '@shared/types'
 
 declare global {
   interface Window {
-    transcript: TranscriptApi
+    app: TranscriptApi
   }
 }

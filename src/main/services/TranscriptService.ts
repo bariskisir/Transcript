@@ -9,7 +9,7 @@ import type {
   SessionStateEvent,
   StartSessionRequest,
   StartSessionResult,
-  TranscriptDocument,
+  SessionDocument,
   TranscriptResultEvent,
   TranscriptSegment,
   TranslationResultEvent,
@@ -44,14 +44,14 @@ class SessionStartCancelledError extends Error {
 }
 
 export default class TranscriptService {
-  private currentTranscriptId: string | null = null
-  private startingTranscriptId: string | null = null
+  private currentSessionId: string | null = null
+  private startingSessionId: string | null = null
   private baseDurationMs = 0
   private startedAt = 0
   private persistenceQueue = Promise.resolve()
   private startPromise: Promise<StartSessionResult> | null = null
   private startCancelled = false
-  private stopPromise: Promise<TranscriptDocument | null> | null = null
+  private stopPromise: Promise<SessionDocument | null> | null = null
   private pendingSegments: TranscriptSegment[] = []
   private persistenceTimer: NodeJS.Timeout | null = null
   private sessionSegments: TranscriptSegment[] = []
@@ -73,10 +73,10 @@ export default class TranscriptService {
     private readonly logger: LoggerService,
   ) {}
 
-  /** Starts a transcript and one remote stream for every enabled source. */
+  /** Starts a session and one remote stream for every enabled source. */
   public async start(request: StartSessionRequest): Promise<StartSessionResult> {
     if (this.stopPromise) await this.stopPromise
-    if (this.startPromise || this.currentTranscriptId) {
+    if (this.startPromise || this.currentSessionId) {
       throw new Error('A recording session is already active.')
     }
     this.startCancelled = false
@@ -97,12 +97,12 @@ export default class TranscriptService {
       const apiKey = await this.credentials.getApiKey()
       this.throwIfStartCancelled()
       if (!apiKey) throw new Error('Save a valid Deepgram API key before recording.')
-      const transcript = request.transcriptId
-        ? await this.storage.getTranscript(request.transcriptId)
-        : await this.storage.createTranscript(providerSettings.language, request.title)
-      this.startingTranscriptId = transcript.id
+      const session = request.transcriptId
+        ? await this.storage.getSession(request.transcriptId)
+        : await this.storage.createSession(providerSettings.language, request.title)
+      this.startingSessionId = session.id
       this.throwIfStartCancelled()
-      this.events.onState({ state: 'connecting', transcriptId: transcript.id })
+      this.events.onState({ state: 'connecting', transcriptId: session.id })
       await this.deepgram.start({
         sources,
         apiKey,
@@ -117,26 +117,26 @@ export default class TranscriptService {
         },
       })
       this.throwIfStartCancelled()
-      this.currentTranscriptId = transcript.id
-      this.startingTranscriptId = null
-      this.baseDurationMs = transcript.durationMs
+      this.currentSessionId = session.id
+      this.startingSessionId = null
+      this.baseDurationMs = session.durationMs
       this.startedAt = Date.now()
       this.persistenceQueue = Promise.resolve()
       this.pendingSegments = []
       this.clearPersistenceTimer()
-      this.sessionSegments = [...transcript.segments]
+      this.sessionSegments = [...session.segments]
       this.sessionLanguage = providerSettings.language
       this.translationProvider = request.settings.translationProvider
       this.translationEnabled = request.settings.translationEnabled
       this.translationTarget = request.settings.translationTargetLanguage
-      this.initializeTranslationCoverage(transcript)
+      this.initializeTranslationCoverage(session)
       this.events.onState({
         state: 'recording',
-        transcriptId: transcript.id,
+        transcriptId: session.id,
         startedAt: new Date(this.startedAt).toISOString(),
       })
       this.logger.info('TranscriptService', 'Recording session started.', {
-        transcriptId: transcript.id,
+        sessionId: session.id,
         sources,
         transcriptionProvider: request.settings.transcriptionProvider,
         model: providerSettings.model,
@@ -145,8 +145,8 @@ export default class TranscriptService {
         translationEnabled: request.settings.translationEnabled,
         translationTarget: request.settings.translationTargetLanguage,
       })
-      this.schedulePendingTranslations(transcript.id, true)
-      return { transcript, activeSources: sources }
+      this.schedulePendingTranslations(session.id, true)
+      return { session, activeSources: sources }
     } catch (error) {
       await this.deepgram.stop()
       const cancelled = error instanceof SessionStartCancelledError || this.startCancelled
@@ -163,76 +163,76 @@ export default class TranscriptService {
 
   /** Sends a source-specific PCM frame to Deepgram. */
   public sendAudio(source: AudioSource, samples: Uint8Array): void {
-    if (this.currentTranscriptId) this.deepgram.send(source, samples)
+    if (this.currentSessionId) this.deepgram.send(source, samples)
   }
 
-  /** Changes the target language and translates the selected transcript from its beginning. */
-  public async translateTranscript(
-    transcriptId: string,
+  /** Changes the target language and translates the selected session from its beginning. */
+  public async translateSession(
+    sessionId: string,
     enabled: boolean,
     provider: TranslationProvider,
     targetLanguage: TranslationTargetLanguage,
   ): Promise<void> {
-    if (this.currentTranscriptId === transcriptId) {
+    if (this.currentSessionId === sessionId) {
       this.translationEnabled = enabled
       this.translationProvider = provider
       this.translationTarget = targetLanguage
-      if (enabled) this.schedulePendingTranslations(transcriptId, true)
+      if (enabled) this.schedulePendingTranslations(sessionId, true)
       return
     }
     if (!enabled) return
 
-    const transcript = await this.storage.getTranscript(transcriptId)
-    this.initializeTranslationCoverage(transcript)
+    const session = await this.storage.getSession(sessionId)
+    this.initializeTranslationCoverage(session)
     this.scheduleTranslations(
-      transcript.id,
-      transcript.segments,
-      transcript.language,
+      session.id,
+      session.segments,
+      session.language,
       provider,
       targetLanguage,
       true,
     )
   }
 
-  /** Flushes streams, persists duration, and returns the completed transcript. */
-  public async stop(): Promise<TranscriptDocument | null> {
+  /** Flushes streams, persists duration, and returns the completed session. */
+  public async stop(): Promise<SessionDocument | null> {
     if (this.stopPromise) return this.stopPromise
-    const transcriptId = this.currentTranscriptId
-    if (!transcriptId && this.startPromise) {
+    const sessionId = this.currentSessionId
+    if (!sessionId && this.startPromise) {
       this.startCancelled = true
       this.events.onState({
         state: 'stopping',
-        ...(this.startingTranscriptId ? { transcriptId: this.startingTranscriptId } : {}),
+        ...(this.startingSessionId ? { transcriptId: this.startingSessionId } : {}),
       })
       await this.deepgram.stop()
       await this.startPromise.catch(() => undefined)
       return null
     }
-    if (!transcriptId) return null
+    if (!sessionId) return null
     const stoppedAt = Date.now()
-    this.events.onState({ state: 'stopping', transcriptId })
-    this.stopPromise = this.finishStop(transcriptId, stoppedAt).finally(() => {
+    this.events.onState({ state: 'stopping', transcriptId: sessionId })
+    this.stopPromise = this.finishStop(sessionId, stoppedAt).finally(() => {
       this.stopPromise = null
     })
     return this.stopPromise
   }
 
   /** Completes the remote flush and persistence after the capture stop time is fixed. */
-  private async finishStop(transcriptId: string, stoppedAt: number): Promise<TranscriptDocument> {
+  private async finishStop(sessionId: string, stoppedAt: number): Promise<SessionDocument> {
     try {
       await this.deepgram.stop()
-      this.flushPendingSegments(transcriptId)
-      this.schedulePendingTranslations(transcriptId, true)
+      this.flushPendingSegments(sessionId)
+      this.schedulePendingTranslations(sessionId, true)
       await Promise.all([this.persistenceQueue, ...this.translationQueues.values()])
-      const transcript = await this.storage.finishTranscript(
-        transcriptId,
+      const session = await this.storage.finishSession(
+        sessionId,
         this.baseDurationMs + Math.max(0, stoppedAt - this.startedAt),
       )
       this.logger.info('TranscriptService', 'Recording session stopped.', {
-        transcriptId,
-        durationMs: transcript.durationMs,
+        sessionId,
+        durationMs: session.durationMs,
       })
-      return transcript
+      return session
     } finally {
       this.resetSessionState()
       this.events.onState({ state: 'idle' })
@@ -246,8 +246,8 @@ export default class TranscriptService {
 
   /** Clears all active and pending session fields after stop or failed start. */
   private resetSessionState(): void {
-    this.currentTranscriptId = null
-    this.startingTranscriptId = null
+    this.currentSessionId = null
+    this.startingSessionId = null
     this.baseDurationMs = 0
     this.startedAt = 0
     this.pendingSegments = []
@@ -270,8 +270,8 @@ export default class TranscriptService {
 
   /** Converts final gateway results into durable transcript segments. */
   private handleResult(event: TranscriptResultEvent): void {
-    const transcriptId = this.currentTranscriptId
-    if (!transcriptId || !event.isFinal) {
+    const sessionId = this.currentSessionId
+    if (!sessionId || !event.isFinal) {
       this.events.onResult(event)
       return
     }
@@ -288,18 +288,18 @@ export default class TranscriptService {
     if (!this.persistenceTimer) {
       this.persistenceTimer = setTimeout(() => {
         this.persistenceTimer = null
-        this.flushPendingSegments(transcriptId)
+        this.flushPendingSegments(sessionId)
       }, PERSISTENCE_BATCH_MS)
     }
     this.events.onResult({ ...event, segment })
-    this.schedulePendingTranslations(transcriptId, false)
+    this.schedulePendingTranslations(sessionId, false)
   }
 
   /** Enqueues newly completed sentences once for the active language pair. */
-  private schedulePendingTranslations(transcriptId: string, includeTrailing: boolean): void {
+  private schedulePendingTranslations(sessionId: string, includeTrailing: boolean): void {
     if (!this.translationEnabled || !this.sessionLanguage) return
     this.scheduleTranslations(
-      transcriptId,
+      sessionId,
       this.sessionSegments,
       this.sessionLanguage,
       this.translationProvider,
@@ -310,14 +310,14 @@ export default class TranscriptService {
 
   /** Adds every untranslated sentence after the persisted coverage for one language pair. */
   private scheduleTranslations(
-    transcriptId: string,
+    sessionId: string,
     segments: TranscriptSegment[],
     sourceLanguage: string,
     provider: TranslationProvider,
     targetLanguage: TranslationTargetLanguage,
     includeTrailing: boolean,
   ): void {
-    const pairKey = this.translationPairKey(transcriptId, provider, sourceLanguage, targetLanguage)
+    const pairKey = this.translationPairKey(sessionId, provider, sourceLanguage, targetLanguage)
     const pending = findCompletedTranscriptSentences(segments, {
       startIndex: this.translationCoverage.get(pairKey) ?? 0,
       includeTrailing,
@@ -330,7 +330,7 @@ export default class TranscriptService {
       this.translationCoverage.set(pairKey, sentence.endIndex)
       const queue = (this.translationQueues.get(pairKey) ?? Promise.resolve())
         .then(() =>
-          this.translateSentence(transcriptId, sentence, provider, sourceLanguage, targetLanguage),
+          this.translateSentence(sessionId, sentence, provider, sourceLanguage, targetLanguage),
         )
         .finally(() => this.queuedTranslationKeys.delete(translationKey))
       this.translationQueues.set(pairKey, queue)
@@ -341,10 +341,10 @@ export default class TranscriptService {
   }
 
   /** Seeds source coverage from every translation already stored in one document. */
-  private initializeTranslationCoverage(transcript: TranscriptDocument): void {
-    transcript.translations.forEach((translation) => {
+  private initializeTranslationCoverage(session: SessionDocument): void {
+    session.translations.forEach((translation) => {
       const pairKey = this.translationPairKey(
-        transcript.id,
+        session.id,
         translation.provider,
         translation.sourceLanguage,
         translation.targetLanguage,
@@ -358,7 +358,7 @@ export default class TranscriptService {
 
   /** Translates, persists, and publishes one source-mapped sentence without logging its text. */
   private async translateSentence(
-    transcriptId: string,
+    sessionId: string,
     sentence: CompletedTranscriptSentence,
     provider: TranslationProvider,
     sourceLanguage: string,
@@ -384,8 +384,8 @@ export default class TranscriptService {
         sourceEndIndex: sentence.endIndex,
         createdAt: new Date().toISOString(),
       }
-      await this.storage.appendTranslation(transcriptId, translation)
-      this.events.onTranslation({ transcriptId, translation })
+      await this.storage.appendTranslation(sessionId, translation)
+      this.events.onTranslation({ transcriptId: sessionId, translation })
     } catch (error) {
       this.logger.warn('TranscriptService', 'A completed sentence could not be translated.', error)
       this.events.onError({
@@ -396,27 +396,27 @@ export default class TranscriptService {
     }
   }
 
-  /** Builds a stable transcript and language-pair key for translation coverage. */
+  /** Builds a stable session and language-pair key for translation coverage. */
   private translationPairKey(
-    transcriptId: string,
+    sessionId: string,
     provider: TranslationProvider,
     sourceLanguage: string,
     targetLanguage: string,
   ): string {
-    return `${transcriptId}\u0000${provider}\u0000${sourceLanguage}\u0000${targetLanguage}`
+    return `${sessionId}\u0000${provider}\u0000${sourceLanguage}\u0000${targetLanguage}`
   }
 
   /** Moves pending final segments into one serialized AppData write. */
-  private flushPendingSegments(transcriptId: string): void {
+  private flushPendingSegments(sessionId: string): void {
     this.clearPersistenceTimer()
     const segments = this.pendingSegments.splice(0)
     if (segments.length === 0) return
     this.persistenceQueue = this.persistenceQueue
-      .then(() => this.storage.appendSegments(transcriptId, segments))
+      .then(() => this.storage.appendSegments(sessionId, segments))
       .catch((error: unknown) => {
-        this.logger.error('TranscriptService', 'Transcript segment persistence failed.', error)
+        this.logger.error('TranscriptService', 'Session segment persistence failed.', error)
         this.events.onError({
-          message: `The transcript could not be saved: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          message: `The session could not be saved: ${error instanceof Error ? error.message : 'Unknown error'}`,
           recoverable: true,
         })
       })

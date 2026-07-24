@@ -1,280 +1,267 @@
-# Agent Instructions
+# Transcript -- Development Guide
 
 ## Project Overview
 
-Transcript is a security-sensitive Electron desktop application for live speech transcription and
-optional sentence translation. TypeScript is used across the Electron main process, the sandboxed
-preload bridge, and the React renderer. The renderer captures microphone and Windows
-speaker-loopback audio, converts every source independently to 16 kHz mono PCM16 in an
-AudioWorklet, and sends bounded frames to the main process. The main process opens one Deepgram
-WebSocket per enabled source, translates completed sentences through the selected Google or Bing
-provider, persists validated settings and transcript documents, protects the Deepgram key with
-Electron `safeStorage`, writes rolling logs, and manages GitHub Releases updates.
+Transcript is a secure, real-time desktop transcription application built on Electron. It captures microphone and speaker-loopback audio (speaker capture is Windows-only), streams audio to Deepgram's WebSocket API for speech-to-text, and optionally translates completed sentences through Google Translate or Bing Translate. All sessions are persisted locally in the user's AppData directory and can be exported as TXT or JSON.
 
-Treat the current working tree as the source of truth. Do not inspect Git history or perform Git
-operations unless the user explicitly requests them.
+## Tech Stack
 
-## Repository Layout
+| Layer             | Technology                                                          |
+| ----------------- | ------------------------------------------------------------------- |
+| Desktop Shell     | Electron 43 (with `vite-plugin-electron`)                           |
+| Build             | Vite 8 (main, preload, and renderer bundles)                        |
+| Language          | TypeScript 7.0                                                      |
+| UI Framework      | React 19.2                                                          |
+| State             | Redux Toolkit 2.12                                                  |
+| Component Library | Ant Design 6.5                                                      |
+| Styling           | SCSS Modules                                                        |
+| Speech-to-Text    | Deepgram WebSocket (Nova-3 family)                                  |
+| Translation       | Google Translate API, Bing Translate API                            |
+| Localization      | i18next + react-i18next (en, tr, de, fr, pt, zh, es)                |
+| Validation        | Zod 4.4                                                             |
+| Logging           | electron-log (main), custom log bridge (renderer)                   |
+| Linting           | Biome (lint), Prettier (format)                                     |
+| Testing           | Vitest 4.1                                                          |
+| Packaging         | electron-builder (NSIS on Windows, DMG on macOS, AppImage on Linux) |
 
-- `.github/workflows/release.yml`: tagged Windows verification, packaging, and release workflow.
-- `build/`: committed SVG, PNG, and ICO application icons.
-- `images/`: README interface screenshots; production assets still belong under `build/` or `src/`.
-- `src/main/`: Electron lifecycle, paths, IPC validation, persistence, credentials, Deepgram,
-  translation, exports, logging, migration, window security, and updates.
-- `src/preload/`: the only API exposed to the sandboxed renderer.
-- `src/renderer/`: Vite HTML entry and the React application.
-- `src/renderer/src/audio/`: browser media capture and AudioWorklet integration.
-- `src/renderer/src/components/`: reusable desktop-shell and transcript-sidebar components.
-- `src/renderer/src/pages/`: live transcript workspace and categorized settings UI.
-- `src/renderer/src/i18n/`: i18next initialization and all interface locales.
-- `src/renderer/src/store/`: Redux Toolkit application and live-session state.
-- `src/renderer/src/assets/styles/`: global SCSS tokens, reset, and scrollbar styling.
-- `src/shared/`: serializable contracts, IPC channel names, provider catalogs, and worklet source.
-- `tests/`: Vitest coverage for domain behavior and infrastructure boundaries.
-- `vite.config.ts`: Vite 8 build for renderer, main, and preload outputs.
-- `package.json`: scripts, exact direct dependency versions, Electron Builder configuration, and
-  release metadata.
+## Directory Structure
 
-Keep production application code under `src/`. Root-level files should be limited to repository
-documentation, tooling, and build configuration.
-
-## Toolchain and Commands
-
-Use Node.js 24 or newer and run commands from the repository root. On PowerShell installations that
-block `npm.ps1`, invoke `npm.cmd` instead of changing the machine execution policy.
-
-- Install exactly from the lockfile: `npm ci`
-- Start the development application: `npm run dev`
-- Type-check both process targets: `npm run typecheck`
-- Lint source, tests, and build configuration: `npm run lint`
-- Run the deterministic test suite: `npm test`
-- Check formatting: `npm run format:check`
-- Build main, preload, and renderer: `npm run build`
-
-Before finishing a code change, run at minimum:
-
-```powershell
-npm run typecheck
-npm run lint
-npm test
-npm run format:check
-npm run build
+```
+transcript/
+├── src/
+│   ├── shared/                  # Cross-process contracts (no runtime deps)
+│   │   ├── appInfo.ts            # App identity constants (author, repo URL)
+│   │   ├── deepgram.ts           # Deepgram model catalog, languages, helper functions
+│   │   ├── IpcChannel.ts         # Enumerated IPC channel names (colon-delimited)
+│   │   ├── pcmWorkletSource.ts   # AudioWorklet processor source (PCM16 conversion)
+│   │   ├── transcription.ts      # Transcription provider types + Deepgram settings types
+│   │   ├── translation.ts        # Translation providers, target languages, helpers
+│   │   └── types.ts              # All domain types, settings schema, event types, TranscriptApi
+│   ├── main/                     # Electron main process
+│   │   ├── index.ts              # App lifecycle, single-instance lock, service composition
+│   │   ├── ipc.ts                # IPC handler registration with Zod validation
+│   │   ├── ApplicationPaths.ts   # AppData directory layout (Data, Logs, Runtime)
+│   │   ├── settingsSchema.ts     # Zod schemas for settings (with migration support)
+│   │   ├── security/
+│   │   │   └── RendererNavigationPolicy.ts  # Allow-list for renderer navigations
+│   │   └── services/
+│   │       ├── AppUpdater.ts          # GitHub Releases update check + installer launch
+│   │       ├── BingTranslateService.ts # Bing translation API client
+│   │       ├── CredentialService.ts    # OS-encrypted Deepgram API key storage
+│   │       ├── DeepgramAccountService.ts # Deepgram project balance verification
+│   │       ├── DeepgramConnection.ts   # Single WebSocket connection to Deepgram
+│   │       ├── DeepgramEndpoint.ts     # Deepgram WebSocket URL builder
+│   │       ├── DeepgramMessageParser.ts# Deepgram streaming message parsing
+│   │       ├── DeepgramService.ts      # Manages per-source Deepgram connections
+│   │       ├── ExportService.ts        # Renders sessions to TXT/JSON
+│   │       ├── GitHubReleaseClient.ts  # GitHub Releases API client
+│   │       ├── GoogleTranslateService.ts # Google Translate API client
+│   │       ├── LegacyDataMigrationService.ts # Migrates v2 session formats
+│   │       ├── LoggerService.ts        # Daily rolling file logger (electron-log)
+│   │       ├── StorageService.ts       # JSON file persistence for settings + sessions
+│   │       ├── TranscriptSentenceMatcher.ts # Sentence boundary detection for translation
+│   │       ├── TranscriptService.ts    # Session coordinator: start/stop/translate
+│   │       ├── TranslationProviderService.ts # Provider router (Google vs Bing)
+│   │       └── WindowService.ts        # BrowserWindow creation and media permissions
+│   ├── preload/
+│   │   └── index.ts              # Context bridge exposing TranscriptApi to renderer
+│   └── renderer/src/
+│       ├── entryPoint.tsx        # i18n init, React mount with Provider stack
+│       ├── App.tsx               # Shell layout, page routing, update notice
+│       ├── App.module.scss       # App-level shell styles
+│       ├── assets/styles/        # Global SCSS (variables, resets, theme vars)
+│       ├── audio/
+│       │   └── AudioCaptureService.ts  # getUserMedia + AudioWorklet PCM capture
+│       ├── components/
+│       │   ├── app/
+│       │   │   ├── AppSidebar.tsx       # Left nav: sessions list, settings icon
+│       │   │   └── Titlebar.tsx         # Custom title bar with recording controls
+│       │   └── sidebar/
+│       │       └── SessionsSidebar.tsx  # Session list management panel
+│       ├── context/
+│       │   ├── AntdProvider.tsx   # Ant Design theme tokens + locale
+│       │   └── ThemeProvider.tsx  # Dark/light/system theme resolution
+│       ├── hooks/
+│       │   ├── useAppInit.ts          # Bootstrap + IPC event subscriptions
+│       │   ├── useDesktopActions.ts   # External links, logs, updates
+│       │   ├── useRecordingActions.ts # Start/stop recording + audio capture
+│       │   ├── useSessionActions.ts   # Create/rename/delete/export sessions
+│       │   └── useSettingsActions.ts  # Persisted settings with debounce queue
+│       ├── i18n/
+│       │   ├── index.ts           # i18next init with 7 locales
+│       │   └── locales/           # en.ts, tr.ts, de.ts, fr.ts, pt.ts, zh.ts, es.ts
+│       ├── pages/
+│       │   ├── home/
+│       │   │   ├── HomePage.tsx        # Main workspace layout
+│       │   │   ├── ControlBar.tsx      # Audio source toggles + record button
+│       │   │   ├── TranscriptView.tsx  # Live transcript display surface
+│       │   │   └── *.module.scss       # Per-component styles
+│       │   └── settings/
+│       │       ├── SettingsPage.tsx     # Settings shell with section nav
+│       │       ├── components/
+│       │       │   └── SettingLabel.tsx # Reusable labelled setting row
+│       │       └── sections/
+│       │           ├── GeneralSettingsSection.tsx
+│       │           ├── TranscriptionSettingsSection.tsx
+│       │           ├── TranslationSettingsSection.tsx
+│       │           ├── UpdatesSettingsSection.tsx
+│       │           ├── LoggingSettingsSection.tsx
+│       │           └── AboutSettingsSection.tsx
+│       ├── services/
+│       │   ├── LoggerService.ts         # Renderer-side log bridge to main
+│       │   └── SettingsPersistenceQueue.ts # Serialized async settings writes
+│       ├── store/
+│       │   ├── index.ts            # Redux store + typed hooks
+│       │   └── appSlice.ts         # Single Redux slice (all app state)
+│       └── utils/
+│           └── formatters.ts       # formatDuration, formatDate, toSessionSummary
+├── tests/                          # Vitest test files (14 tests)
+│   ├── appSlice.test.ts
+│   ├── DeepgramAccountService.test.ts
+│   ├── DeepgramConnection.test.ts
+│   ├── DeepgramEndpoint.test.ts
+│   ├── DeepgramMessageParser.test.ts
+│   ├── ExportService.test.ts
+│   ├── Formatters.test.ts
+│   ├── IpcChannel.test.ts
+│   ├── Localization.test.ts
+│   ├── LoggerService.test.ts
+│   ├── RendererNavigationPolicy.test.ts
+│   ├── SettingsPersistenceQueue.test.ts
+│   ├── SettingsSchema.test.ts
+│   └── StorageService.test.ts
+├── vite.config.ts                  # Main + preload + renderer Vite build
+├── vitest.config.ts                # Test config with path aliases
+├── tsconfig.json                   # Root config referencing node + web projects
+├── tsconfig.node.json              # Main/preload/tests TS config (ES2023, NodeNext)
+├── tsconfig.web.json               # Renderer TS config (ES2022, Bundler, JSX)
+└── package.json
 ```
 
-Do not run `npm run package`, `npm run package:win`, or `npm run release` unless packaging or a
-release artifact is explicitly requested. A normal verification build must not create an installer.
+## Commands
 
-## Dependency Policy
+```bash
+npm run dev            # Start Vite dev server + Electron (hot reload for renderer)
+npm run start          # Preview production build from out/
+npm run build          # Typecheck + full Vite build (main, preload, renderer)
+npm run typecheck      # Typecheck both node and web configs (no emit)
+npm run typecheck:node # Typecheck main/preload/tests only
+npm run typecheck:web  # Typecheck renderer only
+npm run test           # Run Vitest suite once (node environment)
+npm run test:watch     # Run Vitest in watch mode
+npm run lint           # Biome lint on src, tests, and config files
+npm run format         # Prettier format all files
+npm run format:check   # Prettier check (CI)
+npm run package        # Build + electron-builder (unpacked directory)
+npm run package:win    # Build + NSIS installers for x64 and arm64
+npm run package:win:x64    # Windows x64 NSIS installer only
+npm run package:win:arm64  # Windows arm64 NSIS installer only
+npm run release        # Alias for package:win
+```
 
-- Keep direct dependencies pinned to exact versions and commit `package-lock.json` with dependency
-  changes.
-- Check every direct package against its npm `latest` dist-tag; `npm outdated --json` should be
-  empty after an intentional dependency refresh.
-- Respect peer dependency and Node engine ranges. Do not use `--force` to leave an invalid tree.
-- Run `npm ls --depth=0`, the full verification suite, and a production build after upgrades.
-- Vite 8 uses Rolldown options. Keep third-party packages in one stable `vendor` group; size-based
-  vendor subdivision can break initialization order in packaged `file://` renderer builds.
-- Main-process runtime dependencies must remain available to Electron Builder when externalized by
-  `vite-plugin-electron`.
+## Architecture
 
-## Runtime Architecture
+### Three-Layer Separation
 
-1. `src/main/index.ts` configures application paths before Electron becomes ready, acquires the
-   single-instance lock, migrates allow-listed legacy data, composes services, creates the window,
-   registers IPC, and schedules the optional packaged update check.
-2. `WindowService` creates a hardened `BrowserWindow` with context isolation, sandboxing, no Node
-   integration, restricted navigation, and narrowly scoped media permissions.
-3. `src/preload/index.ts` exposes the typed `TranscriptApi` through `contextBridge`. The renderer
-   never imports Electron or Node APIs directly.
-4. `src/renderer/src/entryPoint.tsx` initializes i18next and mounts the Redux, theme, Ant Design,
-   and React provider stack.
-5. `useAppInit` bootstraps persisted state and owns main-to-renderer event subscriptions.
-6. `AudioCaptureService` captures enabled sources independently. `useRecordingActions` starts local
-   capture promptly, keeps only a bounded pre-connect frame queue per source, and streams PCM frames
-   through preload without awaiting one IPC round trip per frame.
-7. `TranscriptService` coordinates the encrypted key, transcript workspace, source-separated
-   Deepgram connections, interim events, batched final-segment persistence, sentence translation,
-   and deterministic stop.
-8. `TranslationProviderService` routes completed sentences to Google or Bing. Persisted translations
-   retain source character ranges and segment identifiers so the renderer can correlate both panes.
+The application enforces strict process isolation:
 
-## Process and IPC Boundaries
+1. **Main Process** (`src/main/`): Full Node.js and Electron APIs. Owns all services (Deepgram WebSocket, file I/O, credential encryption, translation HTTP clients, auto-updater). Never exposes raw Node APIs to the renderer.
 
-- The main process owns filesystem access, credentials, remote provider calls, WebSockets, native
-  dialogs, external links, logging, window state, and updates.
-- The preload must remain capability-limited. Never expose raw `ipcRenderer`, unrestricted channel
-  access, filesystem primitives, or shell execution.
-- The renderer is untrusted input. Validate every IPC payload in `src/main/ipc.ts` with Zod, bound
-  strings and binary payload sizes, and verify the sender belongs to the active main window.
-- Keep all IPC payloads serializable. Shared contracts belong in `src/shared/types.ts`; channel
-  names belong in `src/shared/IpcChannel.ts`.
-- When adding or changing a command, update all relevant boundaries together: `IpcChannel`,
-  `TranscriptApi`, preload implementation, main handler and schema, renderer caller, and tests.
-- External URLs must pass the main-process HTTPS origin allow-list before `shell.openExternal` is
-  called. Update downloads have a separate exact GitHub origin, path, filename, size, and digest
-  trust boundary.
-- Keep `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`, and `webSecurity: true`.
-  Do not add development flags that disable the Electron sandbox or web security.
+2. **Preload** (`src/preload/index.ts`): The sole bridge. Uses `contextBridge.exposeInMainWorld('app', api)` to expose a typed `TranscriptApi` object. Only whitelisted IPC channels and event subscriptions pass through. The renderer has no access to `require`, `process`, or Node built-ins.
 
-## Audio and Deepgram Rules
+3. **Renderer** (`src/renderer/src/`): A sandboxed React application. All system interaction goes through `window.app.*` (the preload bridge). State lives in a single Redux store (`appSlice`). No direct file access, no shell access, no Node APIs.
 
-- Microphone and speaker audio are separate `AudioSource` values from capture through persistence.
-  Each enabled source must have its own Deepgram WebSocket. Never mix both sources into one stream.
-- Audio sent to Deepgram must be mono linear PCM16 at 16 kHz. Preserve multi-channel averaging,
-  resampling, bounded worklet chunks, the IPC size limit, socket backpressure limit, and bounded
-  pre-connect/application queues.
-- Keep realtime latency low: send interim results immediately, replace interim text as Deepgram
-  revises it, append final results once, and batch only durable final-segment writes.
-- Stop local capture first, stop its tracks, flush the worklet's partial PCM frame, then finalize and
-  close Deepgram, await pending transcript and translation persistence, and save the duration. Stop
-  must remain idempotent, cancellable during connection, and promptly visible in the UI.
-- Treat expected WebSocket send or close-handshake failures during an intentional stop as normal
-  shutdown, not as user-facing transcription errors.
-- Speaker loopback is Windows-only. Keep the platform limitation explicit in IPC and the UI.
-- Device lists must expose one synthetic Default choice plus distinct physical endpoints; filter
-  Chromium's duplicate `default` and `communications` pseudo-devices.
-- The Deepgram model/language catalog is static in `src/shared/deepgram.ts`. Do not scrape provider
-  documentation at runtime and do not add the unreliable multilingual mode. A selected speech
-  language must be valid for its selected model.
-- Model option changes must be reflected in the catalog, endpoint builder, settings schema,
-  migration/default behavior, settings UI, locales when needed, and relevant Deepgram tests.
-  English-only options such as streaming redaction must stay constrained.
+### IPC Design
 
-## Translation Rules
+- **Channels**: Defined in `src/shared/IpcChannel.ts` as a string enum with `namespace:action` naming (`app:bootstrap`, `session:start`, `event:transcript-result`, etc.).
+- **Invoke/Handle**: Commands (settings save, session start, export) use `ipcRenderer.invoke` / `ipcMain.handle` (request-response with Promise).
+- **Send/On**: High-frequency data (audio frames) and renderer logs use fire-and-forget `ipcRenderer.send` / `ipcMain.on`.
+- **Main-to-Renderer Events**: Recording state changes, transcription results, translation results, errors, and update progress are pushed via `webContents.send` and received by the preload's subscription helpers. Each subscriber returns a cleanup function.
+- **Validation**: Every IPC handler in `src/main/ipc.ts` validates its input with Zod schemas before processing. Sender identity is verified by comparing `sender.id` to the main window's `webContents.id`.
+- **Security**: External URL navigation is allow-listed (Deepgram, GitHub, author site). Renderer navigations are restricted by `RendererNavigationPolicy.ts`. The Deepgram API key is encrypted with Electron's `safeStorage` API.
 
-- Translation is optional and independent from the interface language and Deepgram speech language.
-  Supported providers and target languages belong in `src/shared/translation.ts`.
-- Translate complete sentences during live capture. On explicit translation requests or session
-  stop, include the final unpunctuated trailing text so no durable text is stranded.
-- Preserve the sentence matcher's exact continuous-text convention: trim segments, join them with a
-  single space, and store `sourceStartIndex`, `sourceEndIndex`, and `sourceSegmentIds` against that
-  text. The renderer and persistence logic depend on these ranges for hover correspondence.
-- Track translation coverage separately for transcript, provider, source language, and target
-  language. Avoid duplicate work and preserve per-pair ordering when requests overlap.
-- Persist a successful translation before publishing it to the renderer. A provider failure is
-  recoverable and must not stop transcription.
-- Never log sentence text sent to a translation provider. Keep provider response parsing defensive,
-  normalize regional language codes deliberately, retain request timeouts, and mock network clients
-  in tests.
-- TXT exports may append only the currently selected provider/target translation. JSON remains the
-  complete lossless transcript document. Supported export formats are TXT and JSON only.
+### State Flow
 
-## Persistence, Credentials, and Logging
+```
+User Action (renderer)
+  -> hook (useRecordingActions etc.)
+  -> window.app.startSession() [preload bridge]
+  -> ipcRenderer.invoke('session:start', payload) [IPC]
+  -> ipcMain.handle + Zod validation [main]
+  -> TranscriptService.start() [main service]
+  -> DeepgramService.start() -> DeepgramConnection [WebSocket to Deepgram]
+  <- DeepgramConnection parses streaming messages
+  <- TranscriptService.handleResult() -> webContents.send('event:transcript-result')
+  <- Preload subscription -> dispatch(receiveTranscriptResult())
+  <- Redux updates currentSession.segments
+  <- TranscriptView re-renders
+```
 
-- Durable paths are rooted below `Transcript`: `Data/settings.json`,
-  `Data/transcripts/*.json`, `Data/credentials.bin`, and `Logs/`. Chromium cache and session files
-  belong below `Runtime/`.
-- Preserve the distinction between durable data and disposable Electron runtime state.
-- Settings, transcript segments, translations, and complete transcript JSON must pass their Zod
-  schemas on both read and write.
-- Renderer settings commands send only changed fields. Merge each validated patch with the latest
-  settings inside the same main-process file lock so concurrent controls cannot overwrite each
-  other. Do not persist application settings through renderer `localStorage`.
-- `StorageService` intentionally uses direct complete-file writes protected by per-file operation
-  queues. Do not reintroduce temporary-file-plus-rename persistence or recovery logic; obsolete
-  `.tmp` files are cleanup-only legacy artifacts.
-- Preserve the workspace invariant: there is always at least one transcript. The only empty
-  transcript cannot be deleted; deleting the only populated transcript creates and selects an empty
-  replacement.
-- Default transcript titles use `isDefaultTitle` and are localized only for display. Renaming sets
-  `isDefaultTitle` to `false`. Do not persist a UI-language-specific default title.
-- API keys are validated before saving and encrypted only with asynchronous Electron `safeStorage`.
-  There is no plaintext fallback. Never log, serialize into settings, expose during bootstrap, or
-  commit an API key. Decryption is allowed only for the explicit settings credential field and live
-  transcription.
-- Logs are level-filtered daily files below `Transcript/Logs`, with general and error retention.
-  Renderer logging must go through the validated preload/main boundary. Do not log raw audio, API
-  keys, full credentials, or complete transcript/translation text.
-- Legacy migration must remain allow-listed to durable settings, credentials, transcript JSON, and
-  logs. Never copy an entire previous Chromium profile into the new data root.
+Settings follow a similar path but use `SettingsPersistenceQueue` in the renderer to serialize concurrent writes before they reach `storage.updateSettings()`.
 
-## Renderer, Styling, and Localization
+## Coding Conventions
 
-- Keep the compact desktop shell: native-style title bar, left global action rail, collapsible
-  transcript sidebar, full-height workspace, and scrollable categorized settings content.
-- Reuse Ant Design controls, Lucide icons, semantic SCSS tokens, and component-scoped
-  `*.module.scss` files. Do not place CSS in TSX `style` props or inline `<style>` elements.
-- Global theme values belong in `assets/styles/_tokens.scss`; shared reset and scroll behavior
-  belongs in `assets/styles/index.scss` and `_scrollbar.scss`.
-- Use `build/icon.svg` for renderer logos. Keep SVG, PNG, ICO, package metadata, and About branding
-  synchronized when changing the application identity.
-- Transcript body text should remain continuous and space-efficient. Do not add per-segment source
-  labels, clocks, cards, or metadata headers to the live reading surface. Keep optional translation
-  as the existing correlated secondary pane.
-- Transcript history is the collapsible left workspace sidebar, not a drawer from the right.
-  Preserve create, open, rename, immediate delete, localized default titles, and the configured
-  12/24-hour timestamp behavior.
-- Keep renderer orchestration in hooks and Redux state. Native, credential, provider-network, and
-  filesystem work stays out of React components.
-- Every user-facing string must come from i18next. Supported interface locales are `en`, `tr`, `de`,
-  `fr`, `pt`, `zh`, and `es`; this is independent of speech and translation languages.
-- English is the canonical complete locale shape. When adding or renaming a key, update every locale
-  in `src/renderer/src/i18n/locales/` and keep `tests/Localization.test.ts` passing.
-- Error interpolation uses i18next parameters such as `{{details}}`; pass the matching value and do
-  not hardcode unresolved template text.
-- A settings field change normally requires updates to `AppSettings`, `DEFAULT_SETTINGS`,
-  `settingsSchema`, persisted migration/default behavior, UI, all locales, and tests. Increment
-  `settingsRevision` only when persisted compatibility requires a schema migration.
+### TypeScript
 
-## Updates and Releases
+- **Strict mode everywhere**: `strict: true`, `noUncheckedIndexedAccess: true`, `exactOptionalPropertyTypes: true` in both tsconfig files.
+- **Path aliases**: `@shared/*`, `@main/*`, `@renderer/*` -- configured in both tsconfig and Vite aliases.
+- **Const assertions**: Domain constants use `as const` arrays then derive union types with `(typeof ARRAY)[number]`.
+- **Explicit types**: All function parameters and return types are declared (no inference for public API surfaces).
+- **No `any`**: Zod schemas validate unknown IPC input; internal code uses explicit types.
 
-- `AppUpdater` queries GitHub's latest-release API for `bariskisir/transcript`. Development reports
-  available metadata without downloading or installing; packaged builds download the matching
-  Windows installer.
-- Packaged startup update checks run immediately when enabled. Cache release discovery briefly so
-  repeated controls do not consume the unauthenticated GitHub REST API quota unnecessarily.
-- Downloaded updates install only after the user explicitly chooses install/restart. Run assisted
-  NSIS updates silently with `--force-run`, select the exact architecture-specific setup asset,
-  stream it to disk, and verify its size and GitHub SHA-256 digest when present.
-- Releases are triggered by tags matching `v*`. The Windows workflow installs Node 24 dependencies,
-  validates the tag against `package.json`, runs typecheck, lint, tests, and formatting checks, then
-  builds and publishes x64 and arm64 NSIS setup executables.
-- GitHub publishing must create a normal release rather than a draft. Publish only the lowercase
-  architecture-specific setup executables; do not publish `.blockmap` or `latest.yml` metadata.
-- Keep `package.json` version, product metadata, artifact names, GitHub API selection, icons, and
-  workflow behavior aligned when changing release configuration.
+### Style
 
-## Testing Guidance
+- **SCSS Modules**: Every component has a co-located `.module.scss` file. No global CSS beyond `assets/styles/index.scss` (variables, resets).
+- **CSS Variables**: Theming uses CSS custom properties (`--color-border`, `--modal-background`, `--font-family`) toggled by the `theme-mode` attribute on `<body>`.
+- **Ant Design token overrides**: Color, border radius, control heights, and motion duration are set in `AntdProvider.tsx` via `ConfigProvider` theme tokens. Primary color is `#00b96b`.
+- **Linting**: Biome for lint rules, Prettier for formatting. No ESLint.
+- **No console**: Diagnostics use the custom `LoggerService` (main) or `createLogger()` (renderer), never `console.log`.
 
-- Deepgram result parsing changes: update `tests/DeepgramMessageParser.test.ts`.
-- Endpoint, model, language, or option changes: update `tests/DeepgramEndpoint.test.ts` and settings
-  tests.
-- Connection lifecycle, latency, backpressure, or stop changes: update
-  `tests/DeepgramConnection.test.ts` and `tests/TranscriptService.test.ts`.
-- AudioWorklet framing, resampling, or channel handling changes: update
-  `tests/AudioWorklet.test.ts`.
-- Persistence, migration, title, deletion, translation storage, or workspace invariants: update
-  `tests/StorageService.test.ts` and `tests/LegacyDataMigrationService.test.ts` as relevant.
-- Translation provider behavior: update `tests/GoogleTranslateService.test.ts` or
-  `tests/BingTranslateService.test.ts`; sentence boundaries and range mapping belong in
-  `tests/TranscriptSentenceMatcher.test.ts` and session scheduling in
-  `tests/TranscriptService.test.ts`.
-- UI state, formatting, settings serialization, and localization changes: update `AppSlice`,
-  `Formatters`, `SettingsPersistenceQueue`, `SettingsSchema`, and `Localization` tests as relevant.
-- Credential balance behavior: update `tests/DeepgramAccountService.test.ts`.
-- Export changes: update `tests/ExportService.test.ts`. Supported exports are TXT and JSON only.
-- Navigation, logging, updater, release client, or packaging configuration changes have dedicated
-  boundary tests under `tests/`; keep them synchronized.
+### React
 
-Prefer deterministic unit tests with mocked filesystem, WebSocket, updater, account, fetch, or
-translation boundaries. Do not require a real Deepgram API key, microphone, speaker, GitHub release,
-or network connection in the test suite.
+- **Redux-first**: All shared state goes through the single `appSlice`. No prop drilling for cross-component data.
+- **Hooks**: Business logic is extracted into custom hooks (`useAppInit`, `useRecordingActions`, `useSessionActions`, `useSettingsActions`, `useDesktopActions`). Components are mostly presentation.
+- **Lazy loading**: The Settings page uses `React.lazy` + `Suspense` since it is secondary UI. Home page is eager.
+- **No class components**: Everything is functional with hooks.
+- **Ant Design v6**: Uses `AntdApp` wrapper for `message`/`notification` APIs (hook-based instead of static).
 
-## Code and Change Conventions
+### Services
 
-- Use English for filenames, identifiers, comments, logs, source-level error messages, and this
-  document.
-- Begin each source and configuration file with a concise English description comment. Add a concise
-  doc comment above each function, class, component, hook, and method that explains responsibility
-  rather than restating its name.
-- Follow the repository Prettier style: two spaces, no semicolons, single quotes, trailing commas,
-  100-column print width, UTF-8, LF, and a final newline.
-- Keep strict TypeScript enabled, including `noUncheckedIndexedAccess` and
-  `exactOptionalPropertyTypes`. Do not bypass errors with broad casts, `any`, or blanket lint
-  suppressions.
-- Use the `@main`, `@renderer`, and `@shared` aliases at layer boundaries; keep relative imports for
-  nearby files when clearer.
-- Prefer small services and hooks with explicit dependencies. Keep presentation orchestration out
-  of main service implementations and native/filesystem logic out of React components.
-- Preserve unrelated user files and changes. Never commit runtime data, logs, credentials, `.env`
-  files, `node_modules`, `out`, `release`, TypeScript build info, coverage output, or installers.
+- **Explicit dependency injection**: Main-process services accept their dependencies in constructors (e.g., `TranscriptService` receives `StorageService`, `CredentialService`, `DeepgramService`, etc.). No singletons or global imports.
+- **Reusable but isolated**: Each `DeepgramConnection` is one WebSocket per audio source. `DeepgramService` manages the map of source-to-connection.
+- **Cancellable operations**: `TranscriptService` supports cancelling in-progress starts via `SessionStartCancelledError`.
+- **Batched persistence**: Transcript segments are batched every 250ms before writing to disk. Translation sentences are queued per language pair.
+
+### JSDoc
+
+Every exported class, function, interface, and type alias has a JSDoc comment. File-level JSDoc blocks describe the module's purpose. Comments describe _why_, not _what_ -- the code is self-documenting for mechanics.
+
+## Key Design Decisions
+
+- **Single Redux slice** rather than multiple slices -- the app state is cohesive (transcript results, session state, settings, audio levels are all tightly coupled during recording).
+- **Per-source Deepgram connections** -- microphone and speaker each get their own WebSocket to Deepgram, enabling independent source tracking and separate `TranscriptResultEvent.source` fields.
+- **Speaker loopback is Windows-only** -- the main process rejects `speakerEnabled` on non-Windows platforms at session start. The renderer disables the speaker toggle on macOS/Linux.
+- **Preconnect audio buffering** -- `useRecordingActions` starts capture immediately and buffers up to 20 frames before the Deepgram WebSocket opens, then flushes them to avoid missing early speech.
+- **Sentence-level translation** -- translation is not word-by-word; `TranscriptSentenceMatcher` detects completed sentences using punctuation boundaries, and only completed sentences are sent to the translation provider.
+- **Settings serialization queue** -- `SettingsPersistenceQueue` ensures that rapid settings changes (e.g., toggling switches) are applied in order and the final Redux state always matches the last successful persistence.
+- **Credentials are OS-encrypted** -- the Deepgram API key is stored with Electron's `safeStorage` API (DPAPI on Windows, Keychain on macOS, libsecret on Linux). The plaintext is never written to disk.
+- **Session-as-workspace invariant** -- there must always be at least one session. Deleting the last session fails; the app ensures a replacement is returned. Bootstrap creates a session if none exist.
+- **Single instance lock** -- prevents multiple application windows. Second launch restores and focuses the existing window.
+- **Auto-update via GitHub Releases** -- `AppUpdater` polls the GitHub Releases API, compares semver, downloads the platform-appropriate installer, and launches it with NSIS silent flags.
+- **Localization is renderer-only** -- i18next runs in the renderer. i18n locale files are included in `tsconfig.node.json` includes so the main process can validate locale codes, but no UI strings are resolved in main.
+
+## Testing
+
+- **Runner**: Vitest 4.1 with `environment: 'node'` (no jsdom needed for most tests, though jsdom is available as a dev dependency).
+- **Path aliases**: Tests use the same `@main`, `@shared`, `@renderer` aliases as the source, configured in `vitest.config.ts`.
+- **Test categories**:
+  - **Unit**: Pure logic tests (`IpcChannel.test.ts`, `DeepgramEndpoint.test.ts`, `Formatters.test.ts`, `DeepgramMessageParser.test.ts`, `ExportService.test.ts`, `SettingsPersistenceQueue.test.ts`).
+  - **Redux**: State transition tests (`appSlice.test.ts`).
+  - **Validation**: Schema tests (`SettingsSchema.test.ts`).
+  - **Integration**: Service tests with mocked dependencies (`StorageService.test.ts`, `DeepgramAccountService.test.ts`, `DeepgramConnection.test.ts`, `LoggerService.test.ts`, `Localization.test.ts`, `RendererNavigationPolicy.test.ts`).
+- **No E2E tests**: The project relies on Vitest unit/integration tests. There is no Playwright or Spectron setup.
+- **Running tests**:
+  ```bash
+  npm run test         # Single run
+  npm run test:watch   # Watch mode
+  ```

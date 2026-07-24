@@ -42,7 +42,7 @@ export const ThemeProvider = ({ children }: PropsWithChildren): React.JSX.Elemen
   useEffect(() => {
     document.body.setAttribute('theme-mode', theme)
     document.documentElement.style.colorScheme = theme
-    void window.transcript.setTheme(theme).catch((error: unknown) => {
+    void window.app.setTheme(theme).catch((error: unknown) => {
       logger.warn('Native title-bar theme could not be synchronized.', error)
     })
   }, [theme])

@@ -14,7 +14,7 @@ import DeepgramService from './services/DeepgramService'
 import BingTranslateService from './services/BingTranslateService'
 import GoogleTranslateService from './services/GoogleTranslateService'
 import LoggerService from './services/LoggerService'
-import LegacyDataMigrationService from './services/LegacyDataMigrationService'
+
 import StorageService from './services/StorageService'
 import TranscriptService from './services/TranscriptService'
 import TranslationProviderService from './services/TranslationProviderService'
@@ -28,7 +28,6 @@ let loggerService: LoggerService | null = null
 
 /** Creates all services and binds them to a newly opened window. */
 const openApplicationWindow = async (): Promise<void> => {
-  await new LegacyDataMigrationService(applicationPaths).migrate()
   const storage = new StorageService(applicationPaths.dataRoot)
   await storage.initialize()
   const settings = await storage.loadSettings()

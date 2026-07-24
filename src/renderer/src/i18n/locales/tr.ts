@@ -16,7 +16,7 @@ export default {
     confirm: 'Onayla',
     later: 'Daha sonra',
   },
-  nav: { transcript: 'Transkript', history: 'Geçmiş', settings: 'Ayarlar' },
+  nav: { sessions: 'Oturumlar', settings: 'Ayarlar' },
   status: {
     idle: 'Hazır',
     connecting: 'Bağlanıyor',
@@ -40,8 +40,6 @@ export default {
   transcript: {
     newTranscript: 'Yeni transkript',
     renameTranscript: 'Transkripti yeniden adlandır',
-    showSidebar: 'Transkript panelini göster',
-    hideSidebar: 'Transkript panelini gizle',
     emptyTitle: 'Transkriptiniz burada görünecek',
     emptyDescription: 'Bir ses kaynağı etkinleştirin, dili seçin ve kaydı başlatın.',
     translationTo: 'Çeviri · {{language}}',
@@ -56,11 +54,19 @@ export default {
     exported: 'Transkript dışa aktarıldı',
     copied: 'Panoya kopyalandı',
   },
-  history: {
-    title: 'Transkript geçmişi',
-    emptyTitle: 'Henüz transkript yok',
+  sessions: {
+    newSession: 'Yeni oturum',
+    renameSession: 'Oturumu yeniden adlandır',
+    emptyTitle: 'Henüz oturum yok',
     emptyDescription: 'Tamamlanan oturumlar yerel olarak kaydedilir ve burada görünür.',
+    exportTxt: 'TXT olarak dışa aktar',
+    exportJson: 'JSON olarak dışa aktar',
+    exportTxtAll: 'Tümünü TXT olarak dışa aktar',
+    exportJsonAll: 'Tümünü JSON olarak dışa aktar',
+    deleteAll: 'Tümünü Sil',
+    exportAll: 'Tümünü Dışa Aktar',
   },
+  sidebar: { showSidebar: 'Kenar çubuğunu göster', hideSidebar: 'Kenar çubuğunu gizle' },
   settings: {
     title: 'Ayarlar',
     general: 'Genel',

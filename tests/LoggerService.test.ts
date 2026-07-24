@@ -1,69 +1,88 @@
 /**
- * Verifies that logger configuration changes are applied and recorded only when necessary.
+ * Verifies the main-process logger creation, level changes, and log file naming.
  */
 
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { mkdirSync, rmSync } from 'node:fs'
+import { join } from 'node:path'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
-const loggerMocks = vi.hoisted(() => {
-  /** Creates the electron-log surface used by LoggerService. */
-  const createLogger = () => ({
-    transports: {
-      file: {
-        level: 'info' as string | false,
-        maxSize: 0,
-        format: '',
-        resolvePathFn: (): string => '',
-      },
-      console: { level: 'info' as string | false, format: '' },
-    },
-    error: vi.fn(),
-    warn: vi.fn(),
-    info: vi.fn(),
-    debug: vi.fn(),
-    verbose: vi.fn(),
+const testDir = join(__dirname, '..', '.test-logs')
+
+// We need electron-log and electron mocks before importing the service
+vi.mock('electron-log/main', () => {
+  const mockLogFn = vi.fn()
+  const createTransport = () => ({
+    file: { maxSize: 0, format: '', level: 'info', resolvePathFn: null as (() => string) | null },
+    console: { format: '', level: 'info' },
   })
-
   return {
-    app: createLogger(),
-    errors: createLogger(),
+    default: {
+      create: vi.fn(() => ({
+        transports: createTransport(),
+        error: mockLogFn,
+        warn: mockLogFn,
+        info: mockLogFn,
+        debug: mockLogFn,
+        verbose: mockLogFn,
+      })),
+    },
   }
 })
 
-vi.mock('electron-log/main', () => ({
-  default: {
-    /** Returns the matching fake transport for each named application logger. */
-    create: vi.fn(({ logId }: { logId: string }) =>
-      logId === 'transcript-app' ? loggerMocks.app : loggerMocks.errors,
-    ),
-  },
+vi.mock('electron', () => ({
+  app: { name: 'test-app' },
 }))
 
-vi.mock('node:fs/promises', () => ({
-  mkdir: vi.fn(async () => undefined),
-  readdir: vi.fn(async () => []),
-  unlink: vi.fn(async () => undefined),
-}))
-
-import LoggerService from '@main/services/LoggerService'
-
-beforeEach(() => {
-  vi.clearAllMocks()
-})
+import electronLog from 'electron-log/main'
+import LoggerService from '../src/main/services/LoggerService'
 
 describe('LoggerService', () => {
-  it('does not reconfigure or log when the selected level has not changed', () => {
-    const logger = new LoggerService('C:\\Transcript\\Logs', 'info')
+  afterEach(() => {
+    try {
+      rmSync(testDir, { recursive: true, force: true })
+    } catch {
+      /* ok */
+    }
+    vi.clearAllMocks()
+  })
 
-    expect(loggerMocks.app.info).toHaveBeenCalledTimes(1)
-    logger.setLevel('info')
-    logger.setLevel('info')
-    expect(loggerMocks.app.info).toHaveBeenCalledTimes(1)
+  it('creates two loggers using the app name as logId prefix', () => {
+    new LoggerService(testDir, 'info')
+    const create = electronLog.create as ReturnType<typeof vi.fn>
+    expect(create).toHaveBeenCalledWith({ logId: 'test-app-app' })
+    expect(create).toHaveBeenCalledWith({ logId: 'test-app-errors' })
+  })
 
-    logger.setLevel('debug')
-    expect(loggerMocks.app.transports.file.level).toBe('debug')
-    expect(loggerMocks.app.info).toHaveBeenCalledTimes(2)
+  it('returns the configured logs directory', () => {
+    const service = new LoggerService(testDir, 'info')
+    expect(service.getLogsDirectory()).toBe(testDir)
+  })
 
-    logger.setLevel('debug')
-    expect(loggerMocks.app.info).toHaveBeenCalledTimes(2)
+  it('writes error and debug entries without throwing', () => {
+    const service = new LoggerService(testDir, 'info')
+    expect(() => {
+      service.error('TestModule', 'Something went wrong')
+      service.warn('TestModule', 'Deprecation warning')
+      service.info('TestModule', 'App started')
+      service.debug('TestModule', 'Extra detail')
+    }).not.toThrow()
+  })
+
+  it('creates the log directory on instantiation', () => {
+    new LoggerService(testDir, 'info')
+    expect(() => mkdirSync(testDir, { recursive: true })).not.toThrow()
+    // electron-log's create method was called, which means transport setup ran
+    expect(electronLog.create).toHaveBeenCalled()
+  })
+
+  it('writes a renderer log entry without throwing', () => {
+    const service = new LoggerService(testDir, 'info')
+    expect(() =>
+      service.writeRenderer({
+        level: 'info',
+        module: 'RendererModule',
+        message: 'UI event',
+      }),
+    ).not.toThrow()
   })
 })

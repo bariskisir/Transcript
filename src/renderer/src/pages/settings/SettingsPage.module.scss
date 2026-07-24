@@ -280,6 +280,15 @@
   }
 }
 
+.statusTag {
+  :global(.ant-tag) {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin: 0;
+  }
+}
+
 @media (max-width: 960px) {
   .menu {
     width: 184px;

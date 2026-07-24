@@ -8,10 +8,10 @@ import {
   type AppSettings,
   type BootstrapPayload,
   type DeepgramBalance,
+  type SessionDocument,
   type SessionStateEvent,
-  type TranscriptDocument,
+  type SessionSummary,
   type TranscriptResultEvent,
-  type TranscriptSummary,
   type TranslationResultEvent,
   type UpdateStateEvent,
 } from '@shared/types'
@@ -29,13 +29,13 @@ export interface AppState {
   version: string
   hasApiKey: boolean
   apiBalance: DeepgramBalance[]
-  history: TranscriptSummary[]
-  currentTranscript: TranscriptDocument | null
+  sessions: SessionSummary[]
+  currentSession: SessionDocument | null
   session: SessionStateEvent
   interim: { microphone: string; speaker: string }
   levels: { microphone: number; speaker: number }
   update: UpdateStateEvent
-  transcriptSidebarOpen: boolean
+  sessionsSidebarOpen: boolean
   compactMode: boolean
 }
 
@@ -48,13 +48,13 @@ const initialState: AppState = {
   version: '0.0.0',
   hasApiKey: false,
   apiBalance: [],
-  history: [],
-  currentTranscript: null,
+  sessions: [],
+  currentSession: null,
   session: { state: 'idle' },
   interim: { microphone: '', speaker: '' },
   levels: { microphone: 0, speaker: 0 },
   update: { state: 'idle' },
-  transcriptSidebarOpen: true,
+  sessionsSidebarOpen: true,
   compactMode: false,
 }
 
@@ -70,8 +70,8 @@ const appSlice = createSlice({
       state.platform = action.payload.platform
       state.version = action.payload.version
       state.hasApiKey = action.payload.hasApiKey
-      state.history = action.payload.transcripts
-      state.currentTranscript = action.payload.currentTranscript
+      state.sessions = action.payload.sessions
+      state.currentSession = action.payload.currentSession
     },
     /** Opens a top-level application page. */
     setPage(state, action: PayloadAction<AppPage>) {
@@ -94,36 +94,36 @@ const appSlice = createSlice({
     setApiBalance(state, action: PayloadAction<DeepgramBalance[]>) {
       state.apiBalance = action.payload
     },
-    /** Replaces transcript history from local storage. */
-    setHistory(state, action: PayloadAction<TranscriptSummary[]>) {
-      state.history = action.payload
+    /** Replaces session summaries from local storage. */
+    setSessions(state, action: PayloadAction<SessionSummary[]>) {
+      state.sessions = action.payload
     },
     /** Inserts a newly created summary at the front without duplicating its identifier. */
-    addHistorySummary(state, action: PayloadAction<TranscriptSummary>) {
-      state.history = [
+    addSessionSummary(state, action: PayloadAction<SessionSummary>) {
+      state.sessions = [
         action.payload,
-        ...state.history.filter((item) => item.id !== action.payload.id),
+        ...state.sessions.filter((item) => item.id !== action.payload.id),
       ]
     },
-    /** Replaces a known summary in place, or inserts it when history was not yet synchronized. */
-    replaceHistorySummary(state, action: PayloadAction<TranscriptSummary>) {
-      const index = state.history.findIndex((item) => item.id === action.payload.id)
-      if (index === -1) state.history.unshift(action.payload)
-      else state.history[index] = action.payload
+    /** Replaces a known summary in place, or inserts it when sessions list was not yet synchronized. */
+    replaceSessionSummary(state, action: PayloadAction<SessionSummary>) {
+      const index = state.sessions.findIndex((item) => item.id === action.payload.id)
+      if (index === -1) state.sessions.unshift(action.payload)
+      else state.sessions[index] = action.payload
     },
-    /** Removes one transcript summary by its durable identifier. */
-    removeHistorySummary(state, action: PayloadAction<string>) {
-      state.history = state.history.filter((item) => item.id !== action.payload)
+    /** Removes one session summary by its durable identifier. */
+    removeSessionSummary(state, action: PayloadAction<string>) {
+      state.sessions = state.sessions.filter((item) => item.id !== action.payload)
     },
-    /** Sets the transcript displayed in the main reading surface. */
-    setCurrentTranscript(state, action: PayloadAction<TranscriptDocument | null>) {
-      state.currentTranscript = action.payload
+    /** Sets the session displayed in the main reading surface. */
+    setCurrentSession(state, action: PayloadAction<SessionDocument | null>) {
+      state.currentSession = action.payload
       state.interim = { microphone: '', speaker: '' }
     },
-    /** Refreshes a document only when it is still the active transcript. */
-    replaceCurrentTranscript(state, action: PayloadAction<TranscriptDocument>) {
-      if (state.currentTranscript?.id === action.payload.id) {
-        state.currentTranscript = action.payload
+    /** Refreshes a document only when it is still the active session. */
+    replaceCurrentSession(state, action: PayloadAction<SessionDocument>) {
+      if (state.currentSession?.id === action.payload.id) {
+        state.currentSession = action.payload
         state.interim = { microphone: '', speaker: '' }
       }
     },
@@ -140,21 +140,19 @@ const appSlice = createSlice({
       const event = action.payload
       if (event.isFinal) {
         state.interim[event.source] = ''
-        if (event.segment && state.currentTranscript) {
-          state.currentTranscript.segments.push(event.segment)
+        if (event.segment && state.currentSession) {
+          state.currentSession.segments.push(event.segment)
         }
       } else if (!event.isFinal) {
         state.interim[event.source] = event.text
       }
     },
-    /** Appends one live translation only to its currently displayed transcript. */
+    /** Appends one live translation only to its currently displayed session. */
     receiveTranslationResult(state, action: PayloadAction<TranslationResultEvent>) {
-      if (state.currentTranscript?.id !== action.payload.transcriptId) return
+      if (state.currentSession?.id !== action.payload.transcriptId) return
       const translation = action.payload.translation
-      if (
-        !state.currentTranscript.translations.some((candidate) => candidate.id === translation.id)
-      ) {
-        state.currentTranscript.translations.push(translation)
+      if (!state.currentSession.translations.some((candidate) => candidate.id === translation.id)) {
+        state.currentSession.translations.push(translation)
       }
     },
     /** Updates the live meter for one source. */
@@ -168,9 +166,9 @@ const appSlice = createSlice({
     setUpdateState(state, action: PayloadAction<UpdateStateEvent>) {
       state.update = action.payload
     },
-    /** Shows or hides the transcript management sidebar for the current app session. */
-    setTranscriptSidebarOpen(state, action: PayloadAction<boolean>) {
-      state.transcriptSidebarOpen = action.payload
+    /** Shows or hides the session management sidebar for the current app session. */
+    setSessionsSidebarOpen(state, action: PayloadAction<boolean>) {
+      state.sessionsSidebarOpen = action.payload
     },
     /** Toggles the distraction-free workspace with title-bar recording controls. */
     setCompactMode(state, action: PayloadAction<boolean>) {
@@ -180,24 +178,24 @@ const appSlice = createSlice({
 })
 
 export const {
-  addHistorySummary,
+  addSessionSummary,
   hydrate,
   receiveTranscriptResult,
   receiveTranslationResult,
-  removeHistorySummary,
-  replaceCurrentTranscript,
-  replaceHistorySummary,
+  removeSessionSummary,
+  replaceCurrentSession,
+  replaceSessionSummary,
   setApiBalance,
   setAudioLevel,
-  setCurrentTranscript,
+  setCurrentSession,
   setHasApiKey,
-  setHistory,
+  setSessions,
   setPage,
   setSessionState,
   setSettings,
   setSettingsSection,
   setCompactMode,
-  setTranscriptSidebarOpen,
+  setSessionsSidebarOpen,
   setUpdateState,
 } = appSlice.actions
 

@@ -10,14 +10,14 @@ import AudioCaptureService from '@renderer/audio/AudioCaptureService'
 import { createLogger, toErrorMessage } from '@renderer/services/LoggerService'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
 import {
-  replaceHistorySummary,
+  replaceSessionSummary,
   setAudioLevel,
-  setCurrentTranscript,
+  setCurrentSession,
   setPage,
   setSessionState,
   setSettingsSection,
 } from '@renderer/store/appSlice'
-import { toTranscriptSummary } from '@renderer/utils/formatters'
+import { toSessionSummary } from '@renderer/utils/formatters'
 
 interface RecordingAttempt {
   backendReady: boolean
@@ -35,7 +35,7 @@ export const useRecordingActions = () => {
   const settings = useAppSelector((state) => state.app.settings)
   const platform = useAppSelector((state) => state.app.platform)
   const hasApiKey = useAppSelector((state) => state.app.hasApiKey)
-  const currentTranscriptId = useAppSelector((state) => state.app.currentTranscript?.id ?? null)
+  const currentSessionId = useAppSelector((state) => state.app.currentSession?.id ?? null)
   const { message } = AntdApp.useApp()
   const { t } = useTranslation()
 
@@ -74,7 +74,7 @@ export const useRecordingActions = () => {
         onFrame: (source, samples) => {
           if (attempt.cancelled) return
           if (attempt.backendReady) {
-            window.transcript.sendAudio(source, samples)
+            window.app.sendAudio(source, samples)
             return
           }
           const frames = pendingFrames.get(source)
@@ -88,27 +88,27 @@ export const useRecordingActions = () => {
       captureStarted = true
       if (attempt.cancelled) return
 
-      const result = await window.transcript.startSession({
+      const result = await window.app.startSession({
         settings: sessionSettings,
-        ...(currentTranscriptId ? { transcriptId: currentTranscriptId } : {}),
+        ...(currentSessionId ? { transcriptId: currentSessionId } : {}),
       })
       if (attempt.cancelled) {
-        await window.transcript.stopSession()
+        await window.app.stopSession()
         return
       }
 
-      dispatch(setCurrentTranscript(result.transcript))
+      dispatch(setCurrentSession(result.session))
       attempt.backendReady = true
       for (const source of result.activeSources) {
         const frames = pendingFrames.get(source) ?? []
         frames.forEach((samples) => {
-          window.transcript.sendAudio(source, samples)
+          window.app.sendAudio(source, samples)
         })
         frames.length = 0
       }
     } catch (error) {
       await captureService.stop()
-      await window.transcript.stopSession().catch(() => null)
+      await window.app.stopSession().catch(() => null)
       dispatch(setSessionState({ state: 'idle' }))
       if (activeAttempt === attempt) activeAttempt = null
       if (!attempt.cancelled) {
@@ -124,7 +124,7 @@ export const useRecordingActions = () => {
     } finally {
       if (attempt.cancelled && activeAttempt === attempt) activeAttempt = null
     }
-  }, [currentTranscriptId, dispatch, hasApiKey, message, platform, settings, t])
+  }, [currentSessionId, dispatch, hasApiKey, message, platform, settings, t])
 
   /** Cancels a pending start or stops capture before flushing the remote streams. */
   const stopRecording = useCallback(async (): Promise<void> => {
@@ -134,23 +134,23 @@ export const useRecordingActions = () => {
     dispatch(
       setSessionState({
         state: 'stopping',
-        ...(currentTranscriptId ? { transcriptId: currentTranscriptId } : {}),
+        ...(currentSessionId ? { transcriptId: currentSessionId } : {}),
       }),
     )
     try {
       await captureService.stop()
-      const transcript = await window.transcript.stopSession()
+      const transcript = await window.app.stopSession()
       if (!transcript) return
-      dispatch(setCurrentTranscript(transcript))
-      const summary = toTranscriptSummary(transcript)
-      dispatch(replaceHistorySummary(summary))
+      dispatch(setCurrentSession(transcript))
+      const summary = toSessionSummary(transcript)
+      dispatch(replaceSessionSummary(summary))
     } catch (error) {
       logger.error('Recording failed to stop cleanly.', error)
       void message.error(t('errors.generic'))
     } finally {
       dispatch(setSessionState({ state: 'idle' }))
     }
-  }, [currentTranscriptId, dispatch, message, t])
+  }, [currentSessionId, dispatch, message, t])
 
   return { captureService, startRecording, stopRecording }
 }

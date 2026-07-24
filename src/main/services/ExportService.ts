@@ -1,8 +1,8 @@
 /**
- * Renders transcript documents into portable text and lossless JSON formats.
+ * Renders session documents into portable text and lossless JSON formats.
  */
 
-import type { TranscriptDocument, TranscriptFormat } from '@shared/types'
+import type { SessionDocument, SessionFormat } from '@shared/types'
 import type { TranslationProvider, TranslationTargetLanguage } from '@shared/translation'
 
 /** Formats a millisecond offset as an elapsed timestamp. */
@@ -13,23 +13,23 @@ const formatTimestamp = (offsetMs: number): string => {
     .padStart(2, '0')}:${(totalSeconds % 60).toString().padStart(2, '0')}`
 }
 
-/** Renders one transcript in the requested export format. */
-export const renderTranscript = (
-  transcript: TranscriptDocument,
-  format: TranscriptFormat,
+/** Renders one session in the requested export format. */
+export const renderSession = (
+  session: SessionDocument,
+  format: SessionFormat,
   includeTranslation = false,
   provider: TranslationProvider = 'google',
   targetLanguage: TranslationTargetLanguage = 'tr',
 ): string => {
-  if (format === 'json') return `${JSON.stringify(transcript, null, 2)}\n`
-  const lines = transcript.segments.map((segment) => {
+  if (format === 'json') return `${JSON.stringify(session, null, 2)}\n`
+  const lines = session.segments.map((segment) => {
     const source = segment.source === 'microphone' ? 'Microphone' : 'Speaker'
     return `[${formatTimestamp(segment.offsetMs)}] ${source}: ${segment.text}`
   })
-  const source = `${transcript.title}\n${'='.repeat(transcript.title.length)}\n\n${lines.join('\n')}\n`
+  const source = `${session.title}\n${'='.repeat(session.title.length)}\n\n${lines.join('\n')}\n`
   if (!includeTranslation) return source
 
-  const translatedText = [...transcript.translations]
+  const translatedText = [...session.translations]
     .filter(
       (translation) =>
         translation.provider === provider && translation.targetLanguage === targetLanguage,

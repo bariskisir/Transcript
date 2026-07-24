@@ -40,21 +40,21 @@ const api: TranscriptApi = {
   /** Sends one bounded source-specific PCM16 frame. */
   sendAudio: (source, samples) =>
     ipcRenderer.send(IpcChannel.AudioChunk, { source, samples: new Uint8Array(samples) }),
-  /** Creates one empty local transcript. */
-  createTranscript: (language) => ipcRenderer.invoke(IpcChannel.TranscriptCreate, language),
-  /** Loads one complete local transcript. */
-  getTranscript: (id) => ipcRenderer.invoke(IpcChannel.TranscriptGet, id),
-  /** Renames one local transcript. */
-  renameTranscript: (id, title) => ipcRenderer.invoke(IpcChannel.TranscriptRename, { id, title }),
-  /** Deletes one local transcript. */
-  deleteTranscript: (id) => ipcRenderer.invoke(IpcChannel.TranscriptDelete, id),
+  /** Creates one empty local session. */
+  createSession: (language) => ipcRenderer.invoke(IpcChannel.SessionCreate, language),
+  /** Loads one complete local session. */
+  getSession: (id) => ipcRenderer.invoke(IpcChannel.SessionGet, id),
+  /** Renames one local session. */
+  renameSession: (id, title) => ipcRenderer.invoke(IpcChannel.SessionRename, { id, title }),
+  /** Deletes one local session. */
+  deleteSession: (id) => ipcRenderer.invoke(IpcChannel.SessionDelete, id),
   /** Changes the provider/target and schedules existing transcript text for translation. */
-  translateTranscript: (id, enabled, provider, targetLanguage) =>
-    ipcRenderer.invoke(IpcChannel.TranscriptTranslate, id, enabled, provider, targetLanguage),
-  /** Opens a native dialog and exports one transcript. */
-  exportTranscript: (id, format, dialogTitle, includeTranslation, provider, targetLanguage) =>
+  translateSession: (id, enabled, provider, targetLanguage) =>
+    ipcRenderer.invoke(IpcChannel.SessionTranslate, id, enabled, provider, targetLanguage),
+  /** Opens a native dialog and exports one session. */
+  exportSession: (id, format, dialogTitle, includeTranslation, provider, targetLanguage) =>
     ipcRenderer.invoke(
-      IpcChannel.TranscriptExport,
+      IpcChannel.SessionExport,
       id,
       format,
       dialogTitle,
@@ -90,4 +90,4 @@ const api: TranscriptApi = {
   onUpdateState: (listener) => subscribe<UpdateStateEvent>(IpcChannel.UpdateState, listener),
 }
 
-contextBridge.exposeInMainWorld('transcript', api)
+contextBridge.exposeInMainWorld('app', api)

@@ -4,6 +4,7 @@
 
 import { mkdir, readdir, unlink } from 'node:fs/promises'
 import { join } from 'node:path'
+import { app } from 'electron'
 import electronLog from 'electron-log/main'
 import type { LogLevel, RendererLogEntry } from '@shared/types'
 
@@ -23,8 +24,8 @@ export default class LoggerService {
     private readonly logsDirectory: string,
     level: LogLevel,
   ) {
-    this.appLogger = electronLog.create({ logId: 'transcript-app' })
-    this.errorLogger = electronLog.create({ logId: 'transcript-errors' })
+    this.appLogger = electronLog.create({ logId: `${app.name}-app` })
+    this.errorLogger = electronLog.create({ logId: `${app.name}-errors` })
     this.configureLogger(this.appLogger, 'app')
     this.configureLogger(this.errorLogger, 'app-error')
     this.setLevel(level)

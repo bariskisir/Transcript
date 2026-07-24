@@ -16,7 +16,7 @@ export default {
     confirm: 'Bestätigen',
     later: 'Später',
   },
-  nav: { transcript: 'Transkript', history: 'Verlauf', settings: 'Einstellungen' },
+  nav: { sessions: 'Sitzungen', settings: 'Einstellungen' },
   status: { idle: 'Bereit', connecting: 'Verbindung', recording: 'Hört zu', stopping: 'Abschluss' },
   controls: {
     microphone: 'Mikrofon',
@@ -35,8 +35,6 @@ export default {
   transcript: {
     newTranscript: 'Neues Transkript',
     renameTranscript: 'Transkript umbenennen',
-    showSidebar: 'Transkriptleiste anzeigen',
-    hideSidebar: 'Transkriptleiste ausblenden',
     emptyTitle: 'Ihr Transkript erscheint hier',
     emptyDescription: 'Aktivieren Sie eine Audioquelle, wählen Sie eine Sprache und starten Sie.',
     translationTo: 'Übersetzung · {{language}}',
@@ -51,11 +49,19 @@ export default {
     exported: 'Transkript exportiert',
     copied: 'In die Zwischenablage kopiert',
   },
-  history: {
-    title: 'Transkriptverlauf',
-    emptyTitle: 'Noch keine Transkripte',
-    emptyDescription: 'Abgeschlossene Sitzungen werden lokal gespeichert.',
+  sessions: {
+    newSession: 'Neue Sitzung',
+    renameSession: 'Sitzung umbenennen',
+    emptyTitle: 'Noch keine Sitzungen',
+    emptyDescription: 'Abgeschlossene Sitzungen werden lokal gespeichert und erscheinen hier.',
+    exportTxt: 'Als TXT exportieren',
+    exportJson: 'Als JSON exportieren',
+    exportTxtAll: 'Alle als TXT exportieren',
+    exportJsonAll: 'Alle als JSON exportieren',
+    deleteAll: 'Alle löschen',
+    exportAll: 'Alle exportieren',
   },
+  sidebar: { showSidebar: 'Seitenleiste anzeigen', hideSidebar: 'Seitenleiste ausblenden' },
   settings: {
     title: 'Einstellungen',
     general: 'Allgemein',

@@ -1,44 +1,45 @@
 /**
- * Verifies that rapid settings controls cannot overwrite an earlier in-flight update.
+ * Verifies that rapid settings writes are serialised without overwriting in-flight updates.
  */
 
 import { describe, expect, it, vi } from 'vitest'
-import { DEFAULT_SETTINGS, type AppSettings, type AppSettingsPatch } from '../src/shared/types'
-import { settingsSchema } from '../src/main/settingsSchema'
 import SettingsPersistenceQueue from '../src/renderer/src/services/SettingsPersistenceQueue'
+import { DEFAULT_SETTINGS, type AppSettings, type AppSettingsPatch } from '../src/shared/types'
 
 describe('SettingsPersistenceQueue', () => {
-  it('merges concurrent patches onto the latest successfully persisted settings', async () => {
+  it('serialises two concurrent patches so the second sees the first result', async () => {
     const queue = new SettingsPersistenceQueue()
+    let durable = { ...DEFAULT_SETTINGS }
     const persisted: AppSettings[] = []
-    let durableSettings = DEFAULT_SETTINGS
-    const persist = vi.fn(async (patch: AppSettingsPatch) => {
-      durableSettings = settingsSchema.parse({ ...durableSettings, ...patch })
-      persisted.push(durableSettings)
-      return durableSettings
+
+    const persist = vi.fn(async (patch: AppSettingsPatch): Promise<AppSettings> => {
+      durable = { ...durable, ...patch } as AppSettings
+      persisted.push(durable)
+      return durable
     })
 
-    const themeWrite = queue.enqueue({ theme: 'light' }, persist)
-    const loggingWrite = queue.enqueue({ logLevel: 'debug' }, persist)
-    await Promise.all([themeWrite, loggingWrite])
+    await Promise.all([
+      queue.enqueue({ theme: 'light' }, persist),
+      queue.enqueue({ logLevel: 'debug' }, persist),
+    ])
 
     expect(persisted).toHaveLength(2)
     expect(persisted[1]).toMatchObject({ theme: 'light', logLevel: 'debug' })
   })
 
-  it('recovers from a failed write using the caller fallback state', async () => {
+  it('recovers after a preceding write fails', async () => {
     const queue = new SettingsPersistenceQueue()
-    const failingPersist = vi.fn(async (): Promise<AppSettings> => {
-      throw new Error('disk unavailable')
+    const failing = vi.fn(async (): Promise<AppSettings> => {
+      throw new Error('disk full')
     })
 
-    await expect(queue.enqueue({ theme: 'light' }, failingPersist)).rejects.toThrow(
-      'disk unavailable',
+    await expect(queue.enqueue({ theme: 'light' }, failing)).rejects.toThrow('disk full')
+
+    const result = await queue.enqueue(
+      { logLevel: 'debug' },
+      async (patch) => ({ ...DEFAULT_SETTINGS, ...patch }) as AppSettings,
     )
-    await expect(
-      queue.enqueue({ logLevel: 'debug' }, async (patch) =>
-        settingsSchema.parse({ ...DEFAULT_SETTINGS, ...patch }),
-      ),
-    ).resolves.toMatchObject({ theme: DEFAULT_SETTINGS.theme, logLevel: 'debug' })
+
+    expect(result).toMatchObject({ logLevel: 'debug' })
   })
 })

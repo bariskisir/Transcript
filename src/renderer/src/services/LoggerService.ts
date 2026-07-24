@@ -41,7 +41,7 @@ class RendererLogger {
 
   /** Sends a bounded serializable entry to the preload bridge. */
   private write(level: LogLevel, message: string, details?: unknown): void {
-    window.transcript.writeLog({
+    window.app.writeLog({
       level,
       module: this.module,
       message: message.slice(0, 1_000),

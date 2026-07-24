@@ -4,7 +4,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { Button, Input, InputNumber, Select, Space, Switch, Tag } from 'antd'
-import { ExternalLink, KeyRound, Save, ShieldCheck, Trash2 } from 'lucide-react'
+import { CircleCheck, ExternalLink, KeyRound, Save, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import {
   DEEPGRAM_DIARIZATION_MODES,
@@ -66,7 +66,7 @@ const DeepgramSettingsSection = (): React.JSX.Element => {
     let active = true
 
     void refreshApiBalance()
-    void window.transcript
+    void window.app
       .getApiKey()
       .then((savedApiKey) => {
         if (active) setApiKey(savedApiKey ?? '')
@@ -153,12 +153,14 @@ const DeepgramSettingsSection = (): React.JSX.Element => {
             title={t('settings.apiKey')}
             description={t('settings.apiKeyDescription')}
           />
-          <Tag
-            color={hasApiKey ? 'success' : 'warning'}
-            icon={hasApiKey ? <ShieldCheck size={12} /> : <KeyRound size={12} />}
-          >
-            {t(hasApiKey ? 'settings.apiKeyConnected' : 'settings.apiKeyMissing')}
-          </Tag>
+          <div className={styles.statusTag}>
+            <Tag
+              color={hasApiKey ? 'green' : 'warning'}
+              icon={hasApiKey ? <CircleCheck size={12} /> : <KeyRound size={12} />}
+            >
+              {t(hasApiKey ? 'settings.apiKeyConnected' : 'settings.apiKeyMissing')}
+            </Tag>
+          </div>
           <Input.Password
             className={styles.flexControl}
             value={apiKey}

@@ -18,7 +18,7 @@ const settingsPersistenceQueue = new SettingsPersistenceQueue()
 /** Returns stable settings and credential commands backed by the preload API. */
 export const useSettingsActions = () => {
   const dispatch = useAppDispatch()
-  const currentTranscriptId = useAppSelector((state) => state.app.currentTranscript?.id ?? null)
+  const currentSessionId = useAppSelector((state) => state.app.currentSession?.id ?? null)
   const { message } = AntdApp.useApp()
   const { t } = useTranslation()
 
@@ -26,7 +26,7 @@ export const useSettingsActions = () => {
   const saveSettings = useCallback(
     async (patch: AppSettingsPatch): Promise<void> => {
       try {
-        const saved = await settingsPersistenceQueue.enqueue(patch, window.transcript.saveSettings)
+        const saved = await settingsPersistenceQueue.enqueue(patch, window.app.saveSettings)
         dispatch(setSettings(saved))
         document.documentElement.lang = saved.uiLanguage
         await i18n.changeLanguage(saved.uiLanguage)
@@ -34,11 +34,11 @@ export const useSettingsActions = () => {
           (patch.translationEnabled !== undefined ||
             patch.translationTargetLanguage !== undefined ||
             patch.translationProvider !== undefined) &&
-          currentTranscriptId
+          currentSessionId
         ) {
           try {
-            await window.transcript.translateTranscript(
-              currentTranscriptId,
+            await window.app.translateSession(
+              currentSessionId,
               saved.translationEnabled,
               saved.translationProvider,
               saved.translationTargetLanguage,
@@ -53,14 +53,14 @@ export const useSettingsActions = () => {
         void message.error(t('errors.generic'))
       }
     },
-    [currentTranscriptId, dispatch, message, t],
+    [currentSessionId, dispatch, message, t],
   )
 
   /** Verifies and saves a Deepgram API key. */
   const saveApiKey = useCallback(
     async (apiKey: string): Promise<boolean> => {
       try {
-        const balance = await window.transcript.saveApiKey(apiKey)
+        const balance = await window.app.saveApiKey(apiKey)
         dispatch(setHasApiKey(true))
         dispatch(setApiBalance(balance))
         void message.success(t('notices.apiKeySaved'))
@@ -77,7 +77,7 @@ export const useSettingsActions = () => {
   /** Removes the encrypted Deepgram key and clears credential state. */
   const deleteApiKey = useCallback(async (): Promise<boolean> => {
     try {
-      await window.transcript.deleteApiKey()
+      await window.app.deleteApiKey()
       dispatch(setHasApiKey(false))
       dispatch(setApiBalance([]))
       void message.success(t('notices.apiKeyRemoved'))
@@ -92,7 +92,7 @@ export const useSettingsActions = () => {
   /** Refreshes optional account balance data without surfacing unsupported accounts. */
   const refreshApiBalance = useCallback(async (): Promise<void> => {
     try {
-      dispatch(setApiBalance(await window.transcript.getApiBalance()))
+      dispatch(setApiBalance(await window.app.getApiBalance()))
     } catch (error) {
       logger.warn('Deepgram balance could not be refreshed.', error)
       dispatch(setApiBalance([]))

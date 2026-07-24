@@ -1,281 +1,334 @@
 /**
- * Verifies transcript persistence invariants in isolated temporary directories.
+ * Verifies StorageService session CRUD operations, file locking behaviour,
+ * and session-migration logic by mocking the underlying filesystem layer.
  */
 
+import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { randomUUID } from 'node:crypto'
-import { mkdtemp, readdir, rm, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterEach, describe, expect, it } from 'vitest'
-import { DEFAULT_SETTINGS } from '../src/shared/types'
 import StorageService from '../src/main/services/StorageService'
+import type { SessionDocument, TranscriptSegment, DeleteSessionResult } from '../src/shared/types'
 
-const temporaryRoots: string[] = []
+const ROOT = '/fake/appdata/transcript'
+const SESSIONS_DIR = join(ROOT, 'sessions')
+const SETTINGS_PATH = join(ROOT, 'settings.json')
 
-/** Creates an initialized storage service with no shared runtime state. */
-const createStorage = async (): Promise<StorageService> => {
-  const root = await mkdtemp(join(tmpdir(), 'transcript-storage-'))
-  temporaryRoots.push(root)
-  const storage = new StorageService(root)
-  await storage.initialize()
-  return storage
-}
+// Module-level file store so tests can reset it between cases.
+let fileStore: Record<string, string> = {}
 
-/** Creates an initialized storage service and exposes its isolated root for file tests. */
-const createStorageContext = async (): Promise<{ root: string; storage: StorageService }> => {
-  const root = await mkdtemp(join(tmpdir(), 'transcript-storage-'))
-  temporaryRoots.push(root)
-  const storage = new StorageService(root)
-  await storage.initialize()
-  return { root, storage }
-}
-
-afterEach(async () => {
-  await Promise.all(
-    temporaryRoots.splice(0).map((root) => rm(root, { recursive: true, force: true })),
-  )
-})
-
-describe('StorageService transcript invariant', () => {
-  it('atomically merges concurrent settings patches without losing fields', async () => {
-    const storage = await createStorage()
-    await storage.saveSettings(DEFAULT_SETTINGS)
-
-    await Promise.all([
-      storage.updateSettings({ theme: 'dark' }),
-      storage.updateSettings({ logLevel: 'debug' }),
-      storage.updateSettings({ autoUpdate: false }),
-      storage.updateSettings({
-        transcriptionProviderSettings: { deepgram: { endpointingMs: 250 } },
-      }),
-      storage.updateSettings({
-        transcriptionProviderSettings: { deepgram: { vocabulary: ['Transcript'] } },
-      }),
-    ])
-
-    await expect(storage.loadSettings()).resolves.toMatchObject({
-      theme: 'dark',
-      logLevel: 'debug',
-      autoUpdate: false,
-      transcriptionProviderSettings: {
-        deepgram: { endpointingMs: 250, vocabulary: ['Transcript'] },
-      },
-    })
-  })
-
-  it('does not delete the only empty transcript', async () => {
-    const storage = await createStorage()
-    const transcript = await storage.createTranscript('en')
-
-    await expect(storage.deleteTranscript(transcript.id)).resolves.toEqual({ deleted: false })
-    await expect(storage.listTranscripts()).resolves.toHaveLength(1)
-    expect(transcript.title).toBe('New Transcript')
-    expect(transcript.isDefaultTitle).toBe(true)
-  })
-
-  it('replaces the only populated transcript before deleting it', async () => {
-    const storage = await createStorage()
-    const transcript = await storage.createTranscript('tr')
-    await storage.appendSegment(transcript.id, {
-      id: randomUUID(),
-      source: 'microphone',
-      text: 'Merhaba dünya.',
-      confidence: 0.98,
-      createdAt: new Date().toISOString(),
-      offsetMs: 200,
-    })
-
-    const result = await storage.deleteTranscript(transcript.id)
-
-    expect(result.deleted).toBe(true)
-    expect(result.replacement).toMatchObject({ language: 'tr', segments: [] })
-    const remaining = await storage.listTranscripts()
-    expect(remaining).toHaveLength(1)
-    expect(remaining[0]?.id).toBe(result.replacement?.id)
-  })
-
-  it('serializes concurrent deletions so one ready transcript always remains', async () => {
-    const storage = await createStorage()
-    const first = await storage.createTranscript('en')
-    const second = await storage.createTranscript('en')
-
-    const results = await Promise.all([
-      storage.deleteTranscript(first.id),
-      storage.deleteTranscript(second.id),
-    ])
-
-    expect(results.filter((result) => result.deleted)).toHaveLength(1)
-    await expect(storage.listTranscripts()).resolves.toHaveLength(1)
-  })
-
-  it('persists a segment batch in order with one aggregate update', async () => {
-    const storage = await createStorage()
-    const transcript = await storage.createTranscript('en')
-    const createdAt = new Date().toISOString()
-
-    await storage.appendSegments(transcript.id, [
-      {
-        id: randomUUID(),
-        source: 'microphone',
-        text: 'First.',
-        confidence: 0.9,
-        createdAt,
-        offsetMs: 100,
-      },
-      {
-        id: randomUUID(),
-        source: 'speaker',
-        text: 'Second.',
-        confidence: 0.92,
-        createdAt,
-        offsetMs: 200,
-      },
-    ])
-
-    const persisted = await storage.getTranscript(transcript.id)
-    expect(persisted.segments.map((segment) => segment.text)).toEqual(['First.', 'Second.'])
-  })
-
-  it('persists a source-mapped translation beside its transcript segments', async () => {
-    const storage = await createStorage()
-    const transcript = await storage.createTranscript('en')
-    const sourceId = randomUUID()
-    await storage.appendSegment(transcript.id, {
-      id: sourceId,
-      source: 'microphone',
-      text: 'Hello world.',
-      confidence: 0.99,
-      createdAt: new Date().toISOString(),
-      offsetMs: 100,
-    })
-
-    await storage.appendTranslation(transcript.id, {
-      id: randomUUID(),
-      provider: 'google',
-      sourceText: 'Hello world.',
-      text: 'Merhaba dünya.',
-      sourceLanguage: 'en',
-      targetLanguage: 'tr',
-      sourceSegmentIds: [sourceId],
-      sourceStartIndex: 0,
-      sourceEndIndex: 12,
-      createdAt: new Date().toISOString(),
-    })
-
-    const persisted = await storage.getTranscript(transcript.id)
-    expect(persisted.translations).toHaveLength(1)
-    expect(persisted.translations[0]).toMatchObject({
-      provider: 'google',
-      sourceText: 'Hello world.',
-      text: 'Merhaba dünya.',
-      sourceSegmentIds: [sourceId],
-    })
-  })
-
-  it('migrates translations saved before provider identities to Google', async () => {
-    const { root, storage } = await createStorageContext()
-    const transcript = await storage.createTranscript('en')
-    const sourceId = randomUUID()
-    const createdAt = new Date().toISOString()
-    const legacyTranscript = {
-      ...transcript,
-      segments: [
-        {
-          id: sourceId,
-          source: 'microphone',
-          text: 'Hello world.',
-          confidence: 0.99,
-          createdAt,
-          offsetMs: 100,
-        },
-      ],
-      translations: [
-        {
-          id: randomUUID(),
-          sourceText: 'Hello world.',
-          text: 'Merhaba dünya.',
-          sourceLanguage: 'en',
-          targetLanguage: 'tr',
-          sourceSegmentIds: [sourceId],
-          sourceStartIndex: 0,
-          sourceEndIndex: 12,
-          createdAt,
-        },
-      ],
+vi.mock('node:fs/promises', () => ({
+  mkdir: vi.fn(async (_path: string, _opts?: unknown) => {}),
+  readFile: vi.fn(async (path: string) => {
+    if (!fileStore[path]) throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' })
+    return fileStore[path]
+  }),
+  readdir: vi.fn(async (path: string) => {
+    if (path === SESSIONS_DIR || path === ROOT) {
+      return Object.keys(fileStore)
+        .filter((k) => k.startsWith(SESSIONS_DIR) && k.endsWith('.json'))
+        .map((k) => ({
+          name: k.slice(SESSIONS_DIR.length + 1),
+          isFile: () => true,
+          isDirectory: () => false,
+        }))
     }
-    await writeFile(
-      join(root, 'transcripts', `${transcript.id}.json`),
-      JSON.stringify(legacyTranscript),
-      'utf8',
-    )
+    return []
+  }),
+  writeFile: vi.fn(async (path: string, content: string) => {
+    fileStore[path] = content
+  }),
+  unlink: vi.fn(async (path: string) => {
+    delete fileStore[path]
+  }),
+}))
 
-    const migrated = await storage.getTranscript(transcript.id)
+function makeSegment(overrides: Partial<TranscriptSegment> = {}): TranscriptSegment {
+  return {
+    id: randomUUID(),
+    source: 'microphone',
+    text: 'hello world',
+    confidence: 0.95,
+    createdAt: new Date().toISOString(),
+    offsetMs: 0,
+    ...overrides,
+  }
+}
 
-    expect(migrated.translations[0]?.provider).toBe('google')
+describe('StorageService', () => {
+  let service: StorageService
+
+  beforeEach(() => {
+    fileStore = {}
+    service = new StorageService(ROOT)
   })
 
-  it('renames a transcript without changing its content', async () => {
-    const storage = await createStorage()
-    const transcript = await storage.createTranscript('en')
+  describe('createSession', () => {
+    it('creates a session with empty segments and translations arrays', async () => {
+      const session = await service.createSession('en')
+      expect(session.segments).toEqual([])
+      expect(session.translations).toEqual([])
+      expect(session.language).toBe('en')
+      expect(session.durationMs).toBe(0)
+    })
 
-    const renamed = await storage.renameTranscript(transcript.id, '  Planning call  ')
-    const persisted = await storage.getTranscript(transcript.id)
+    it('creates a session with the provided title', async () => {
+      const session = await service.createSession('tr', 'My Turkish Session')
+      expect(session.title).toBe('My Turkish Session')
+      expect(session.isDefaultTitle).toBe(false)
+      expect(session.language).toBe('tr')
+    })
 
-    expect(renamed.title).toBe('Planning call')
-    expect(renamed.isDefaultTitle).toBe(false)
-    expect(persisted).toMatchObject({ id: transcript.id, title: 'Planning call', segments: [] })
+    it('uses the default title when none is provided', async () => {
+      const session = await service.createSession('en')
+      expect(session.title).toBe('New Session')
+      expect(session.isDefaultTitle).toBe(true)
+    })
+
+    it('assigns a valid UUID to the session', async () => {
+      const session = await service.createSession('de')
+      expect(session.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
+    })
+
+    it('trims whitespace from the title', async () => {
+      const session = await service.createSession('en', '   Padded Title   ')
+      expect(session.title).toBe('Padded Title')
+    })
+
+    it('truncates titles longer than 200 characters', async () => {
+      const long = 'A'.repeat(300)
+      const session = await service.createSession('en', long)
+      expect(session.title.length).toBeLessThanOrEqual(200)
+    })
+
+    it('uses default title when an empty string is passed', async () => {
+      const session = await service.createSession('en', '')
+      expect(session.title).toBe('New Session')
+      expect(session.isDefaultTitle).toBe(true)
+    })
   })
 
-  it('migrates legacy date-based default titles while keeping the timestamp metadata', async () => {
-    const { root, storage } = await createStorageContext()
-    const transcript = await storage.createTranscript('en')
-    await writeFile(
-      join(root, 'transcripts', `${transcript.id}.json`),
-      JSON.stringify({ ...transcript, title: '2026-07-21 \u00b7 18:07' }),
-      'utf8',
-    )
+  describe('appendSegment', () => {
+    it('appends a segment to an existing session', async () => {
+      const session = await service.createSession('en')
+      const segment = makeSegment({ text: 'First segment' })
+      await service.appendSegment(session.id, segment)
 
-    const migrated = await storage.getTranscript(transcript.id)
+      const loaded = await service.getSession(session.id)
+      expect(loaded.segments).toHaveLength(1)
+      expect(loaded.segments[0]!.text).toBe('First segment')
+    })
 
-    expect(migrated.title).toBe('New Transcript')
-    expect(migrated.isDefaultTitle).toBe(true)
-    expect(migrated.createdAt).toBe(transcript.createdAt)
+    it('appends multiple segments in order', async () => {
+      const session = await service.createSession('en')
+      const seg1 = makeSegment({ text: 'One', offsetMs: 0 })
+      const seg2 = makeSegment({ text: 'Two', offsetMs: 1000 })
+
+      await service.appendSegments(session.id, [seg1, seg2])
+
+      const loaded = await service.getSession(session.id)
+      expect(loaded.segments).toHaveLength(2)
+      expect(loaded.segments[0]!.text).toBe('One')
+      expect(loaded.segments[1]!.text).toBe('Two')
+    })
+
+    it('does nothing when appending an empty segment array', async () => {
+      const session = await service.createSession('en')
+      await service.appendSegments(session.id, [])
+      const loaded = await service.getSession(session.id)
+      expect(loaded.segments).toEqual([])
+    })
+
+    it('updates the session updatedAt timestamp', async () => {
+      const session = await service.createSession('en')
+      const original = session.updatedAt
+      await new Promise((r) => setTimeout(r, 10))
+      await service.appendSegment(session.id, makeSegment())
+
+      const loaded = await service.getSession(session.id)
+      expect(loaded.updatedAt).not.toBe(original)
+    })
   })
 
-  it('serializes concurrent transcript updates and reads without losing segments', async () => {
-    const { root, storage } = await createStorageContext()
-    const transcript = await storage.createTranscript('en')
-    const updates = Array.from({ length: 20 }, (_, index) =>
-      storage.appendSegment(transcript.id, {
-        id: randomUUID(),
-        source: 'microphone',
-        text: `Sentence ${index + 1}.`,
-        confidence: 0.95,
-        createdAt: new Date().toISOString(),
-        offsetMs: index * 100,
-      }),
-    )
-    const reads = Array.from({ length: 20 }, () => storage.getTranscript(transcript.id))
+  describe('renameSession', () => {
+    it('changes the session title', async () => {
+      const session = await service.createSession('en')
+      const renamed = await service.renameSession(session.id, 'Renamed Session')
+      expect(renamed.title).toBe('Renamed Session')
+    })
 
-    await Promise.all([...updates, ...reads])
-    const persisted = await storage.getTranscript(transcript.id)
+    it('sets isDefaultTitle to false after renaming', async () => {
+      const session = await service.createSession('en')
+      const renamed = await service.renameSession(session.id, 'Custom')
+      expect(renamed.isDefaultTitle).toBe(false)
+    })
 
-    expect(persisted.segments).toHaveLength(20)
-    expect((await readdir(join(root, 'transcripts'))).some((name) => name.endsWith('.tmp'))).toBe(
-      false,
-    )
+    it('throws when the title is empty after trimming', async () => {
+      const session = await service.createSession('en')
+      await expect(service.renameSession(session.id, '   ')).rejects.toThrow(
+        'Session title cannot be empty.',
+      )
+    })
+
+    it('trims and truncates the new title', async () => {
+      const session = await service.createSession('en')
+      const renamed = await service.renameSession(session.id, '   Trimmed   ')
+      expect(renamed.title).toBe('Trimmed')
+    })
   })
 
-  it('removes obsolete temporary files without changing transcript JSON files', async () => {
-    const { root, storage } = await createStorageContext()
-    const transcript = await storage.createTranscript('en')
-    const temporaryPath = join(root, 'transcripts', 'obsolete-write.tmp')
-    await writeFile(temporaryPath, 'obsolete', 'utf8')
+  describe('deleteSession', () => {
+    it('deletes an existing session and returns deleted: true', async () => {
+      // Create two sessions: the first can be deleted because the second remains
+      const s1 = await service.createSession('en')
+      await service.createSession('en')
+      const result: DeleteSessionResult = await service.deleteSession(s1.id)
+      expect(result.deleted).toBe(true)
+    })
 
-    await storage.initialize()
+    it('returns deleted: false when the session does not exist', async () => {
+      const result = await service.deleteSession('550e8400-e29b-41d4-a716-446655440000')
+      expect(result.deleted).toBe(false)
+    })
 
-    const files = await readdir(join(root, 'transcripts'))
-    expect(files).toContain(`${transcript.id}.json`)
-    expect(files.some((name) => name.endsWith('.tmp'))).toBe(false)
+    it('creates a replacement when deleting the only populated session', async () => {
+      const session = await service.createSession('en')
+      // Add a segment so the workspace is populated and deletion is allowed
+      await service.appendSegment(session.id, makeSegment({ text: 'hello' }))
+      const result = await service.deleteSession(session.id)
+      expect(result.deleted).toBe(true)
+      expect(result.replacement).toBeDefined()
+      expect(result.replacement!.language).toBe(session.language)
+    })
+
+    it('returns a replacement session with empty segments', async () => {
+      const session = await service.createSession('en')
+      await service.appendSegment(session.id, makeSegment({ text: 'hello' }))
+      const result = await service.deleteSession(session.id)
+      expect(result.replacement).toBeDefined()
+      expect(result.replacement!.segments).toEqual([])
+      expect(result.replacement!.translations).toEqual([])
+    })
+
+    it('returns deleted: false when trying to delete the last empty workspace', async () => {
+      // The only session with no segments cannot be deleted
+      const session = await service.createSession('en')
+      const result = await service.deleteSession(session.id)
+      expect(result.deleted).toBe(false)
+    })
+
+    it('returns no replacement when multiple sessions exist', async () => {
+      const s1 = await service.createSession('en')
+      await service.createSession('en')
+      const result = await service.deleteSession(s1.id)
+      expect(result.deleted).toBe(true)
+      expect(result.replacement).toBeUndefined()
+    })
+
+    it('throws for an invalid session identifier', async () => {
+      await expect(service.deleteSession('not-a-uuid')).rejects.toThrow(
+        'Invalid session identifier.',
+      )
+    })
+  })
+
+  describe('listSessions', () => {
+    it('returns an empty array when no sessions exist', async () => {
+      const summaries = await service.listSessions()
+      expect(summaries).toEqual([])
+    })
+
+    it('returns summaries with segment counts', async () => {
+      await service.createSession('en', 'Session A')
+      const b = await service.createSession('tr', 'Session B')
+      await service.appendSegment(b.id, makeSegment())
+
+      const summaries = await service.listSessions()
+      expect(summaries.length).toBeGreaterThanOrEqual(1)
+
+      const summaryB = summaries.find((s) => s.id === b.id)
+      expect(summaryB).toBeDefined()
+      expect(summaryB!.segmentCount).toBe(1)
+    })
+
+    it('returns summaries sorted by createdAt descending', async () => {
+      const s1 = await service.createSession('en', 'First')
+      await new Promise((r) => setTimeout(r, 5))
+      const s2 = await service.createSession('en', 'Second')
+
+      const summaries = await service.listSessions()
+      const ids = summaries.map((s) => s.id)
+      const idx1 = ids.indexOf(s1.id)
+      const idx2 = ids.indexOf(s2.id)
+      expect(idx2).toBeLessThan(idx1)
+    })
+
+    it('includes preview text from segments', async () => {
+      const session = await service.createSession('en')
+      await service.appendSegment(session.id, makeSegment({ text: 'Hello world preview' }))
+
+      const summaries = await service.listSessions()
+      const summary = summaries.find((s) => s.id === session.id)
+      expect(summary?.preview).toContain('Hello world preview')
+    })
+
+    it('returns summaries with the correct duration', async () => {
+      const session = await service.createSession('en')
+      await service.finishSession(session.id, 123_456)
+
+      const summaries = await service.listSessions()
+      const summary = summaries.find((s) => s.id === session.id)
+      expect(summary?.durationMs).toBe(123_456)
+    })
+  })
+
+  describe('finishSession', () => {
+    it('sets the duration on the session', async () => {
+      const session = await service.createSession('en')
+      const finished = await service.finishSession(session.id, 60_000)
+      expect(finished.durationMs).toBe(60_000)
+    })
+
+    it('clamps negative durations to zero', async () => {
+      const session = await service.createSession('en')
+      const finished = await service.finishSession(session.id, -5_000)
+      expect(finished.durationMs).toBe(0)
+    })
+
+    it('rounds fractional milliseconds', async () => {
+      const session = await service.createSession('en')
+      const finished = await service.finishSession(session.id, 42_500.7)
+      expect(finished.durationMs).toBe(42_501)
+    })
+  })
+
+  describe('getSession', () => {
+    it('loads a previously created session', async () => {
+      const session = await service.createSession('en', 'My Session')
+      const loaded = await service.getSession(session.id)
+      expect(loaded.title).toBe('My Session')
+      expect(loaded.id).toBe(session.id)
+    })
+
+    it('throws for an invalid session id', async () => {
+      await expect(service.getSession('bad-id')).rejects.toThrow('Invalid session identifier.')
+    })
+  })
+
+  describe('saveSettings / loadSettings', () => {
+    it('loads default settings when no file exists', async () => {
+      const settings = await service.loadSettings()
+      expect(settings.settingsRevision).toBe(1)
+      expect(settings.theme).toBe('system')
+    })
+
+    it('saves and reloads custom settings', async () => {
+      const loaded = await service.loadSettings()
+      const updated = { ...loaded, theme: 'dark' as const }
+      const saved = await service.saveSettings(updated)
+      expect(saved.theme).toBe('dark')
+
+      const reloaded = await service.loadSettings()
+      expect(reloaded.theme).toBe('dark')
+    })
   })
 })

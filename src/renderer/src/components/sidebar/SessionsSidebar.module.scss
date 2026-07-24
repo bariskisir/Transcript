@@ -1,10 +1,10 @@
-/* Styles the topics-style transcript management sidebar. */
+/* Styles the sessions sidebar with collapsible state. */
 
 .container {
-  width: 238px;
+  width: 190px;
   height: 100%;
   min-height: 0;
-  flex: 0 0 238px;
+  flex: 0 0 190px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -35,16 +35,9 @@
   font-weight: 650;
 }
 
-.addButton,
-.deleteButton {
-  display: grid;
-  place-items: center;
-}
-
 .headerActions {
   display: flex;
-  align-items: center;
-  gap: 1px;
+  gap: 4px;
 }
 
 .scrollArea {

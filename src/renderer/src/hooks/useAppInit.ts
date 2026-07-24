@@ -30,11 +30,11 @@ export const useAppInit = (): void => {
   useEffect(() => {
     let active = true
     const cleanup = [
-      window.transcript.onSessionState((event) => dispatch(setSessionState(event))),
-      window.transcript.onTranscriptResult((event) => dispatch(receiveTranscriptResult(event))),
-      window.transcript.onTranslationResult((event) => dispatch(receiveTranslationResult(event))),
-      window.transcript.onUpdateState((event) => dispatch(setUpdateState(event))),
-      window.transcript.onError((event) => {
+      window.app.onSessionState((event) => dispatch(setSessionState(event))),
+      window.app.onTranscriptResult((event) => dispatch(receiveTranscriptResult(event))),
+      window.app.onTranslationResult((event) => dispatch(receiveTranslationResult(event))),
+      window.app.onUpdateState((event) => dispatch(setUpdateState(event))),
+      window.app.onError((event) => {
         logger.error('Main process reported an application error.', event.message)
         void messageRef.current.error(
           i18n.t(
@@ -46,7 +46,7 @@ export const useAppInit = (): void => {
       }),
     ]
 
-    void window.transcript
+    void window.app
       .bootstrap()
       .then(async (payload) => {
         if (!active) return

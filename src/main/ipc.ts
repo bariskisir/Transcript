@@ -10,7 +10,7 @@ import { TRANSLATION_PROVIDERS, TRANSLATION_TARGET_LANGUAGES } from '@shared/tra
 import {
   AUDIO_SOURCES,
   LOG_LEVELS,
-  TRANSCRIPT_FORMATS,
+  SESSION_FORMATS,
   type StartSessionRequest,
   type UpdateStateEvent,
 } from '@shared/types'
@@ -19,7 +19,7 @@ import { settingsPatchSchema, settingsSchema } from './settingsSchema'
 import type AppUpdater from './services/AppUpdater'
 import type CredentialService from './services/CredentialService'
 import type DeepgramAccountService from './services/DeepgramAccountService'
-import { renderTranscript } from './services/ExportService'
+import { renderSession } from './services/ExportService'
 import type LoggerService from './services/LoggerService'
 import type StorageService from './services/StorageService'
 import type TranscriptService from './services/TranscriptService'
@@ -39,7 +39,7 @@ const transcriptRenameSchema = z.object({
   id: z.uuid(),
   title: z.string().trim().min(1).max(200),
 })
-const formatSchema = z.enum(TRANSCRIPT_FORMATS)
+const formatSchema = z.enum(SESSION_FORMATS)
 const dialogTitleSchema = z.string().trim().min(1).max(120)
 const translationProviderSchema = z.enum(TRANSLATION_PROVIDERS)
 const translationTargetSchema = z.enum(TRANSLATION_TARGET_LANGUAGES)
@@ -95,27 +95,23 @@ export const registerIpc = (window: BrowserWindow, services: IpcServices): void 
 
   ipcMain.handle(IpcChannel.AppBootstrap, async (event) => {
     assertSender(event.sender)
-    const [settings, initialTranscripts, hasApiKey] = await Promise.all([
+    const [settings, initialSessions, hasApiKey] = await Promise.all([
       services.storage.loadSettings(),
-      services.storage.listTranscripts(),
+      services.storage.listSessions(),
       services.credentials.hasApiKey(),
     ])
-    if (initialTranscripts.length === 0) {
-      await services.storage.createTranscript(
-        settings.transcriptionProviderSettings.deepgram.language,
-      )
+    if (initialSessions.length === 0) {
+      await services.storage.createSession(settings.transcriptionProviderSettings.deepgram.language)
     }
-    const transcripts =
-      initialTranscripts.length === 0
-        ? await services.storage.listTranscripts()
-        : initialTranscripts
-    const firstTranscript = transcripts[0]
-    if (!firstTranscript) throw new Error('Transcript workspace could not be initialized.')
-    const currentTranscript = await services.storage.getTranscript(firstTranscript.id)
+    const sessions =
+      initialSessions.length === 0 ? await services.storage.listSessions() : initialSessions
+    const firstSession = sessions[0]
+    if (!firstSession) throw new Error('Session workspace could not be initialized.')
+    const currentSession = await services.storage.getSession(firstSession.id)
     return {
       settings,
-      transcripts,
-      currentTranscript,
+      sessions,
+      currentSession,
       hasApiKey,
       platform: process.platform,
       version: app.getVersion(),
@@ -173,25 +169,25 @@ export const registerIpc = (window: BrowserWindow, services: IpcServices): void 
       services.transcript.sendAudio(parsed.data.source, parsed.data.samples)
     }
   })
-  ipcMain.handle(IpcChannel.TranscriptCreate, async (event, input: unknown) => {
+  ipcMain.handle(IpcChannel.SessionCreate, async (event, input: unknown) => {
     assertSender(event.sender)
-    return services.storage.createTranscript(transcriptLanguageSchema.parse(input))
+    return services.storage.createSession(transcriptLanguageSchema.parse(input))
   })
-  ipcMain.handle(IpcChannel.TranscriptGet, async (event, input: unknown) => {
+  ipcMain.handle(IpcChannel.SessionGet, async (event, input: unknown) => {
     assertSender(event.sender)
-    return services.storage.getTranscript(transcriptIdSchema.parse(input))
+    return services.storage.getSession(transcriptIdSchema.parse(input))
   })
-  ipcMain.handle(IpcChannel.TranscriptRename, async (event, input: unknown) => {
+  ipcMain.handle(IpcChannel.SessionRename, async (event, input: unknown) => {
     assertSender(event.sender)
     const { id, title } = transcriptRenameSchema.parse(input)
-    return services.storage.renameTranscript(id, title)
+    return services.storage.renameSession(id, title)
   })
-  ipcMain.handle(IpcChannel.TranscriptDelete, async (event, input: unknown) => {
+  ipcMain.handle(IpcChannel.SessionDelete, async (event, input: unknown) => {
     assertSender(event.sender)
-    return services.storage.deleteTranscript(transcriptIdSchema.parse(input))
+    return services.storage.deleteSession(transcriptIdSchema.parse(input))
   })
   ipcMain.handle(
-    IpcChannel.TranscriptTranslate,
+    IpcChannel.SessionTranslate,
     async (
       event,
       idInput: unknown,
@@ -200,7 +196,7 @@ export const registerIpc = (window: BrowserWindow, services: IpcServices): void 
       targetInput: unknown,
     ) => {
       assertSender(event.sender)
-      await services.transcript.translateTranscript(
+      await services.transcript.translateSession(
         transcriptIdSchema.parse(idInput),
         z.boolean().parse(enabledInput),
         translationProviderSchema.parse(providerInput),
@@ -209,7 +205,7 @@ export const registerIpc = (window: BrowserWindow, services: IpcServices): void 
     },
   )
   ipcMain.handle(
-    IpcChannel.TranscriptExport,
+    IpcChannel.SessionExport,
     async (
       event,
       idInput: unknown,
@@ -225,16 +221,16 @@ export const registerIpc = (window: BrowserWindow, services: IpcServices): void 
       const includeTranslation = z.boolean().parse(includeTranslationInput)
       const provider = translationProviderSchema.parse(providerInput)
       const targetLanguage = translationTargetSchema.parse(targetInput)
-      const transcript = await services.storage.getTranscript(transcriptIdSchema.parse(idInput))
+      const session = await services.storage.getSession(transcriptIdSchema.parse(idInput))
       const result = await dialog.showSaveDialog(window, {
         title: dialogTitle,
-        defaultPath: `${transcript.title.replace(/[<>:"/\\|?*]/g, '-')}.${format}`,
+        defaultPath: `${session.title.replace(/[<>:"/\\|?*]/g, '-')}.${format}`,
         filters: [{ name: format.toUpperCase(), extensions: [format] }],
       })
       if (result.canceled || !result.filePath) return false
       await writeFile(
         result.filePath,
-        renderTranscript(transcript, format, includeTranslation, provider, targetLanguage),
+        renderSession(session, format, includeTranslation, provider, targetLanguage),
         'utf8',
       )
       return true

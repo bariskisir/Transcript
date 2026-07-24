@@ -2,7 +2,7 @@
  * Provides consistent formatting helpers for transcript timestamps and summaries.
  */
 
-import type { TimeFormat, TranscriptDocument, TranscriptSummary } from '@shared/types'
+import type { TimeFormat, SessionDocument, SessionSummary } from '@shared/types'
 
 /** Formats elapsed milliseconds as mm:ss or hh:mm:ss. */
 export const formatDuration = (milliseconds: number): string => {
@@ -20,7 +20,7 @@ export const formatDate = (isoDate: string, timeFormat: TimeFormat): string => {
   const date = new Date(isoDate)
   const day = date.getDate().toString().padStart(2, '0')
   const month = (date.getMonth() + 1).toString().padStart(2, '0')
-  const year = date.getFullYear()
+  const year = String(date.getFullYear()).slice(2)
   const minutes = date.getMinutes().toString().padStart(2, '0')
   const localHours = date.getHours()
 
@@ -33,17 +33,17 @@ export const formatDate = (isoDate: string, timeFormat: TimeFormat): string => {
   return `${day}.${month}.${year} ${localHours.toString().padStart(2, '0')}:${minutes}`
 }
 
-/** Converts a complete transcript into a compact history summary. */
-export const toTranscriptSummary = (document: TranscriptDocument): TranscriptSummary => ({
-  id: document.id,
-  title: document.title,
-  isDefaultTitle: document.isDefaultTitle,
-  language: document.language,
-  createdAt: document.createdAt,
-  updatedAt: document.updatedAt,
-  durationMs: document.durationMs,
-  segmentCount: document.segments.length,
-  preview: document.segments
+/** Converts a complete session into a compact history summary. */
+export const toSessionSummary = (session: SessionDocument): SessionSummary => ({
+  id: session.id,
+  title: session.title,
+  isDefaultTitle: session.isDefaultTitle,
+  language: session.language,
+  createdAt: session.createdAt,
+  updatedAt: session.updatedAt,
+  durationMs: session.durationMs,
+  segmentCount: session.segments.length,
+  preview: session.segments
     .map((segment) => segment.text)
     .join(' ')
     .slice(0, 140),

@@ -205,7 +205,11 @@ const ControlBar = ({
         className={styles.recordButton ?? ''}
         {...(light && canStop
           ? { danger: true as const }
-          : { type: 'primary' as const, danger: canStop, ...(light ? { ghost: true as const } : {}) })}
+          : {
+              type: 'primary' as const,
+              danger: canStop,
+              ...(light ? { ghost: true as const } : {}),
+            })}
         loading={stopping}
         icon={canStop ? <Square size={14} fill="currentColor" /> : <Radio size={17} />}
         onClick={() => void (canStop ? onStop() : onStart())}

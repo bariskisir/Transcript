@@ -6,17 +6,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Dropdown, type MenuProps } from 'antd'
 import { AudioLines, Download, GripHorizontal, Languages } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { TRANSCRIPT_FORMATS, type TranscriptFormat } from '@shared/types'
+import { SESSION_FORMATS, type SessionFormat } from '@shared/types'
 import { useAppSelector } from '@renderer/store'
 import styles from './TranscriptView.module.scss'
 
 interface TranscriptViewProps {
-  onExport: (id: string, format: TranscriptFormat) => Promise<void>
+  onExport: (id: string, format: SessionFormat) => Promise<void>
 }
 
 /** Displays final and interim source text above its optional live translated sentences. */
 const TranscriptView = ({ onExport }: TranscriptViewProps): React.JSX.Element => {
-  const transcript = useAppSelector((state) => state.app.currentTranscript)
+  const transcript = useAppSelector((state) => state.app.currentSession)
   const interim = useAppSelector((state) => state.app.interim)
   const compactMode = useAppSelector((state) => state.app.compactMode)
   const session = useAppSelector((state) => state.app.session.state)
@@ -120,7 +120,7 @@ const TranscriptView = ({ onExport }: TranscriptViewProps): React.JSX.Element =>
     return nodes
   }
 
-  const exportItems: MenuProps['items'] = TRANSCRIPT_FORMATS.map((format) => ({
+  const exportItems: MenuProps['items'] = SESSION_FORMATS.map((format) => ({
     key: format,
     label: t('transcript.exportAs', { format: format.toUpperCase() }),
   }))
@@ -213,7 +213,7 @@ const TranscriptView = ({ onExport }: TranscriptViewProps): React.JSX.Element =>
             <Dropdown
               menu={{
                 items: exportItems,
-                onClick: ({ key }) => void onExport(transcript.id, key as TranscriptFormat),
+                onClick: ({ key }) => void onExport(transcript.id, key as SessionFormat),
               }}
               trigger={['click']}
             >

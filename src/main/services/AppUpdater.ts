@@ -52,7 +52,7 @@ const createRuntime = (): UpdateRuntime => ({
   isPackaged: app.isPackaged,
   version: app.getVersion(),
   architecture: process.arch,
-  temporaryDirectory: join(app.getPath('temp'), 'Transcript', 'Updates'),
+  temporaryDirectory: join(app.getPath('temp'), app.name, 'Updates'),
   quit: () => app.quit(),
   launchInstaller,
 })

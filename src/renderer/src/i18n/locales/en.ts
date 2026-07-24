@@ -16,7 +16,7 @@ export default {
     confirm: 'Confirm',
     later: 'Later',
   },
-  nav: { transcript: 'Transcript', history: 'History', settings: 'Settings' },
+  nav: { sessions: 'Sessions', settings: 'Settings' },
   status: {
     idle: 'Ready',
     connecting: 'Connecting',
@@ -40,8 +40,6 @@ export default {
   transcript: {
     newTranscript: 'New transcript',
     renameTranscript: 'Rename transcript',
-    showSidebar: 'Show transcript sidebar',
-    hideSidebar: 'Hide transcript sidebar',
     emptyTitle: 'Your transcript will appear here',
     emptyDescription: 'Enable an audio source, choose a language, and start recording.',
     translationTo: 'Translation · {{language}}',
@@ -56,11 +54,19 @@ export default {
     exported: 'Transcript exported',
     copied: 'Copied to clipboard',
   },
-  history: {
-    title: 'Transcript history',
-    emptyTitle: 'No transcripts yet',
+  sessions: {
+    newSession: 'New Session',
+    renameSession: 'Rename session',
+    emptyTitle: 'No sessions yet',
     emptyDescription: 'Completed sessions are saved locally and will appear here.',
+    exportTxt: 'Export as TXT',
+    exportJson: 'Export as JSON',
+    exportTxtAll: 'Export all as TXT',
+    exportJsonAll: 'Export all as JSON',
+    deleteAll: 'Delete All',
+    exportAll: 'Export All',
   },
+  sidebar: { showSidebar: 'Show sidebar', hideSidebar: 'Hide sidebar' },
   settings: {
     title: 'Settings',
     general: 'General',
@@ -151,7 +157,8 @@ export default {
     mipOptOut: 'Model improvement opt-out',
     mipOptOutDescription: 'Request that Deepgram not retain data for model improvement.',
     checkUpdatesOnStartup: 'Check for updates on startup',
-    checkUpdatesOnStartupDescription: 'Automatically check GitHub Releases when the application starts.',
+    checkUpdatesOnStartupDescription:
+      'Automatically check GitHub Releases when the application starts.',
     checkUpdates: 'Check now',
     checking: 'Checking for updates...',
     upToDate: 'Application is up to date.',

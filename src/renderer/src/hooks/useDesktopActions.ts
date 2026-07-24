@@ -18,7 +18,7 @@ export const useDesktopActions = () => {
   const openExternal = useCallback(
     async (url: string): Promise<void> => {
       try {
-        await window.transcript.openExternal(url)
+        await window.app.openExternal(url)
       } catch (error) {
         logger.error('External URL could not be opened.', error)
         void message.error(t('errors.generic'))
@@ -30,7 +30,7 @@ export const useDesktopActions = () => {
   /** Opens the application log directory in the operating-system file manager. */
   const openLogsDirectory = useCallback(async (): Promise<void> => {
     try {
-      await window.transcript.openLogsDirectory()
+      await window.app.openLogsDirectory()
     } catch (error) {
       logger.error('Log directory could not be opened.', error)
       void message.error(t('errors.generic'))
@@ -40,7 +40,7 @@ export const useDesktopActions = () => {
   /** Checks GitHub Releases while preventing rejected IPC calls from escaping the UI. */
   const checkForUpdates = useCallback(async (): Promise<void> => {
     try {
-      await window.transcript.checkForUpdates()
+      await window.app.checkForUpdates()
     } catch (error) {
       logger.error('Application update check failed.', error)
     }
@@ -49,7 +49,7 @@ export const useDesktopActions = () => {
   /** Installs a downloaded update while reporting a rejected restart request. */
   const installUpdate = useCallback(async (): Promise<void> => {
     try {
-      await window.transcript.installUpdate()
+      await window.app.installUpdate()
     } catch (error) {
       logger.error('Downloaded application update could not be installed.', error)
       void message.error(t('errors.generic'))

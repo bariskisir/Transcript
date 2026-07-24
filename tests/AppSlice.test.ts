@@ -1,208 +1,471 @@
 /**
- * Verifies the renderer state transition from replaceable interim text to durable final text.
+ * Verifies Redux appSlice state transitions for hydration, page navigation,
+ * settings, session management, transcript/translation results, and UI toggles.
  */
 
 import { describe, expect, it } from 'vitest'
-import {
-  DEFAULT_SETTINGS,
-  type BootstrapPayload,
-  type TranscriptDocument,
-  type TranscriptSegment,
-} from '../src/shared/types'
 import reducer, {
-  addHistorySummary,
   hydrate,
+  setPage,
+  setSettings,
+  setSettingsSection,
+  setHasApiKey,
+  setApiBalance,
+  setSessions,
+  addSessionSummary,
+  replaceSessionSummary,
+  removeSessionSummary,
+  setCurrentSession,
+  replaceCurrentSession,
+  setSessionState,
   receiveTranscriptResult,
   receiveTranslationResult,
-  removeHistorySummary,
-  replaceCurrentTranscript,
-  replaceHistorySummary,
-  setCurrentTranscript,
-  setSessionState,
+  setAudioLevel,
+  setUpdateState,
+  setSessionsSidebarOpen,
+  setCompactMode,
 } from '../src/renderer/src/store/appSlice'
+import type {
+  AppSettings,
+  BootstrapPayload,
+  SessionDocument,
+  SessionSummary,
+  TranscriptResultEvent,
+  TranslationResultEvent,
+  DeepgramBalance,
+  UpdateStateEvent,
+  TranscriptSegment,
+  SessionStateEvent,
+} from '../src/shared/types'
+import { DEFAULT_SETTINGS } from '../src/shared/types'
+import { randomUUID } from 'node:crypto'
 
-const transcript: TranscriptDocument = {
-  id: '60816155-248f-4896-a010-bd6b1b0f80a0',
-  title: 'Live transcript',
-  isDefaultTitle: false,
-  language: 'en',
-  createdAt: '2026-07-21T10:00:00.000Z',
-  updatedAt: '2026-07-21T10:00:00.000Z',
-  durationMs: 0,
-  segments: [],
-  translations: [],
+function makeSettings(overrides: Partial<AppSettings> = {}): AppSettings {
+  return { ...structuredClone(DEFAULT_SETTINGS), ...overrides }
 }
 
-describe('live transcript state', () => {
-  it('does not let a repeated bootstrap response replace the selected transcript', () => {
-    const bootstrap: BootstrapPayload = {
-      settings: DEFAULT_SETTINGS,
-      transcripts: [],
-      currentTranscript: transcript,
-      hasApiKey: true,
-      platform: 'win32',
-      version: '3.0.0',
-    }
-    const selectedTranscript: TranscriptDocument = {
-      ...transcript,
-      id: '194aefb7-374d-42ef-8885-142dbbc9fb7f',
-      title: 'Selected transcript',
-    }
+function makeBootstrapPayload(overrides: Partial<BootstrapPayload> = {}): BootstrapPayload {
+  const now = new Date().toISOString()
+  return {
+    settings: makeSettings(),
+    sessions: [],
+    currentSession: {
+      id: randomUUID(),
+      title: 'Current',
+      isDefaultTitle: true,
+      language: 'en',
+      createdAt: now,
+      updatedAt: now,
+      durationMs: 0,
+      segments: [],
+      translations: [],
+    },
+    hasApiKey: false,
+    platform: 'win32',
+    version: '1.0.0',
+    ...overrides,
+  }
+}
 
-    let state = reducer(undefined, hydrate(bootstrap))
-    state = reducer(state, setCurrentTranscript(selectedTranscript))
-    state = reducer(state, hydrate(bootstrap))
+function makeSessionSummary(overrides: Partial<SessionSummary> = {}): SessionSummary {
+  const now = new Date().toISOString()
+  return {
+    id: randomUUID(),
+    title: 'Test Session',
+    isDefaultTitle: false,
+    language: 'en',
+    createdAt: now,
+    updatedAt: now,
+    durationMs: 0,
+    segmentCount: 0,
+    preview: '',
+    ...overrides,
+  }
+}
 
-    expect(state.currentTranscript?.id).toBe(selectedTranscript.id)
-  })
+function makeSessionDocument(overrides: Partial<SessionDocument> = {}): SessionDocument {
+  const now = new Date().toISOString()
+  return {
+    id: randomUUID(),
+    title: 'Test Doc',
+    isDefaultTitle: false,
+    language: 'en',
+    createdAt: now,
+    updatedAt: now,
+    durationMs: 0,
+    segments: [],
+    translations: [],
+    ...overrides,
+  }
+}
 
-  it('replaces interim text and clears it when the corrected result becomes final', () => {
-    let state = reducer(undefined, setCurrentTranscript(transcript))
-    state = reducer(
-      state,
-      receiveTranscriptResult({
-        source: 'microphone',
-        text: 'A quick brown',
-        isFinal: false,
-        speechFinal: false,
-        confidence: 0.6,
-      }),
-    )
-    state = reducer(
-      state,
-      receiveTranscriptResult({
-        source: 'microphone',
-        text: 'The quick brown fox',
-        isFinal: false,
-        speechFinal: false,
-        confidence: 0.8,
-      }),
-    )
-    expect(state.interim.microphone).toBe('The quick brown fox')
+function makeTranscriptResult(
+  overrides: Partial<TranscriptResultEvent> = {},
+): TranscriptResultEvent {
+  return {
+    source: 'microphone',
+    text: 'test text',
+    isFinal: true,
+    speechFinal: true,
+    confidence: 0.9,
+    ...overrides,
+  }
+}
 
-    const segment: TranscriptSegment = {
-      id: '82640d84-52c7-4bf5-8323-e768cf5ac378',
-      source: 'microphone',
-      text: 'The quick brown fox.',
-      confidence: 0.96,
-      createdAt: '2026-07-21T10:00:01.000Z',
-      offsetMs: 1_000,
-    }
-    state = reducer(
-      state,
-      receiveTranscriptResult({
-        source: 'microphone',
-        text: segment.text,
-        isFinal: true,
-        speechFinal: true,
-        confidence: segment.confidence,
-        segment,
-      }),
-    )
-
-    expect(state.interim.microphone).toBe('')
-    expect(state.currentTranscript?.segments).toEqual([segment])
-  })
-
-  it('clears a source hypothesis when Deepgram finalizes without a persisted segment', () => {
-    let state = reducer(undefined, setCurrentTranscript(transcript))
-    state = reducer(
-      state,
-      receiveTranscriptResult({
-        source: 'speaker',
-        text: 'replaceable words',
-        isFinal: false,
-        speechFinal: false,
-        confidence: 0.5,
-      }),
-    )
-    state = reducer(
-      state,
-      receiveTranscriptResult({
-        source: 'speaker',
-        text: '',
-        isFinal: true,
-        speechFinal: true,
-        confidence: 0,
-      }),
-    )
-
-    expect(state.interim.speaker).toBe('')
-    expect(state.currentTranscript?.segments).toEqual([])
-  })
-
-  it('clears transient levels and hypotheses when the session becomes idle', () => {
-    let state = reducer(undefined, setCurrentTranscript(transcript))
-    state = reducer(
-      state,
-      receiveTranscriptResult({
-        source: 'microphone',
-        text: 'unfinished phrase',
-        isFinal: false,
-        speechFinal: false,
-        confidence: 0.7,
-      }),
-    )
-    state = reducer(state, setSessionState({ state: 'idle' }))
-
-    expect(state.interim).toEqual({ microphone: '', speaker: '' })
-    expect(state.levels).toEqual({ microphone: 0, speaker: 0 })
-  })
-
-  it('appends a live translation only to its matching active transcript', () => {
-    let state = reducer(undefined, setCurrentTranscript(transcript))
-    const translation = {
-      id: 'd851ff1c-1f5b-489c-9b59-f2c94b7b573b',
-      provider: 'google' as const,
-      sourceText: 'Hello.',
-      text: 'Merhaba.',
+function makeTranslationResult(
+  overrides: Partial<TranslationResultEvent> = {},
+): TranslationResultEvent {
+  return {
+    transcriptId: 'session-id',
+    translation: {
+      id: randomUUID(),
+      provider: 'google',
+      sourceText: 'hello',
+      text: 'merhaba',
       sourceLanguage: 'en',
-      targetLanguage: 'tr' as const,
-      sourceSegmentIds: ['82640d84-52c7-4bf5-8323-e768cf5ac378'],
+      targetLanguage: 'tr',
+      sourceSegmentIds: [randomUUID()],
       sourceStartIndex: 0,
-      sourceEndIndex: 6,
-      createdAt: '2026-07-21T10:00:02.000Z',
-    }
+      sourceEndIndex: 1,
+      createdAt: new Date().toISOString(),
+    },
+    ...overrides,
+  }
+}
 
-    state = reducer(state, receiveTranslationResult({ transcriptId: transcript.id, translation }))
-    state = reducer(
-      state,
-      receiveTranslationResult({
-        transcriptId: '194aefb7-374d-42ef-8885-142dbbc9fb7f',
-        translation: { ...translation, id: 'fc0ff9db-72a9-499d-afeb-20e21429f388' },
-      }),
-    )
+describe('appSlice', () => {
+  describe('initial state', () => {
+    it('starts uninitialized', () => {
+      const state = reducer(undefined, { type: '@@INIT' })
+      expect(state.initialized).toBe(false)
+    })
 
-    expect(state.currentTranscript?.translations).toEqual([translation])
+    it('has home as the default page', () => {
+      const state = reducer(undefined, { type: '@@INIT' })
+      expect(state.page).toBe('home')
+    })
+
+    it('has default settings', () => {
+      const state = reducer(undefined, { type: '@@INIT' })
+      expect(state.settings).toEqual(DEFAULT_SETTINGS)
+    })
+
+    it('starts with empty interim text', () => {
+      const state = reducer(undefined, { type: '@@INIT' })
+      expect(state.interim).toEqual({ microphone: '', speaker: '' })
+    })
   })
 
-  it('updates history atomically without replacing an unrelated active transcript', () => {
-    const firstSummary = {
-      id: transcript.id,
-      title: transcript.title,
-      isDefaultTitle: transcript.isDefaultTitle,
-      language: transcript.language,
-      createdAt: transcript.createdAt,
-      updatedAt: transcript.updatedAt,
-      durationMs: transcript.durationMs,
-      segmentCount: 0,
-      preview: '',
-    }
-    const otherTranscript = {
-      ...transcript,
-      id: '194aefb7-374d-42ef-8885-142dbbc9fb7f',
-      title: 'Other transcript',
-    }
-    let state = reducer(undefined, setCurrentTranscript(otherTranscript))
-    state = reducer(state, addHistorySummary(firstSummary))
-    state = reducer(state, replaceHistorySummary({ ...firstSummary, title: 'Renamed transcript' }))
-    state = reducer(state, replaceCurrentTranscript({ ...transcript, title: 'Renamed transcript' }))
+  describe('hydrate', () => {
+    it('sets initialized to true', () => {
+      const payload = makeBootstrapPayload()
+      const state = reducer(undefined, hydrate(payload))
+      expect(state.initialized).toBe(true)
+    })
 
-    expect(state.history).toHaveLength(1)
-    expect(state.history[0]?.title).toBe('Renamed transcript')
-    expect(state.currentTranscript?.id).toBe(otherTranscript.id)
+    it('is idempotent when already initialized', () => {
+      const payload = makeBootstrapPayload()
+      const state1 = reducer(undefined, hydrate(payload))
+      const payload2 = makeBootstrapPayload({ version: '2.0.0' })
+      const state2 = reducer(state1, hydrate(payload2))
+      expect(state2.version).toBe('1.0.0')
+    })
 
-    state = reducer(state, removeHistorySummary(transcript.id))
-    expect(state.history).toEqual([])
+    it('hydrates settings and platform', () => {
+      const payload = makeBootstrapPayload({
+        settings: makeSettings({ theme: 'dark' }),
+        platform: 'darwin',
+      })
+      const state = reducer(undefined, hydrate(payload))
+      expect(state.settings.theme).toBe('dark')
+      expect(state.platform).toBe('darwin')
+    })
+
+    it('hydrates sessions and current session', () => {
+      const doc = makeSessionDocument({ title: 'Active' })
+      const payload = makeBootstrapPayload({ currentSession: doc })
+      const state = reducer(undefined, hydrate(payload))
+      expect(state.currentSession?.title).toBe('Active')
+    })
+
+    it('hydrates hasApiKey and version', () => {
+      const payload = makeBootstrapPayload({ hasApiKey: true, version: '3.0.0' })
+      const state = reducer(undefined, hydrate(payload))
+      expect(state.hasApiKey).toBe(true)
+      expect(state.version).toBe('3.0.0')
+    })
+  })
+
+  describe('setPage', () => {
+    it('changes the current page', () => {
+      const state = reducer(undefined, setPage('settings'))
+      expect(state.page).toBe('settings')
+    })
+
+    it('disables compact mode when navigating away from home', () => {
+      const state = reducer({ compactMode: true } as any, setPage('settings'))
+      expect(state.compactMode).toBe(false)
+    })
+
+    it('keeps compact mode when navigating to home', () => {
+      const baseState = reducer(undefined, setCompactMode(true))
+      const state = reducer(baseState, setPage('home'))
+      expect(state.compactMode).toBe(true)
+    })
+  })
+
+  describe('setSettingsSection', () => {
+    it('sets the active settings category', () => {
+      const state = reducer(undefined, setSettingsSection('transcription'))
+      expect(state.settingsSection).toBe('transcription')
+    })
+  })
+
+  describe('setSettings', () => {
+    it('replaces the entire settings object', () => {
+      const newSettings = makeSettings({ theme: 'light' })
+      const state = reducer(undefined, setSettings(newSettings))
+      expect(state.settings.theme).toBe('light')
+    })
+  })
+
+  describe('setHasApiKey', () => {
+    it('updates the API key availability flag', () => {
+      const state = reducer(undefined, setHasApiKey(true))
+      expect(state.hasApiKey).toBe(true)
+    })
+  })
+
+  describe('setApiBalance', () => {
+    it('replaces the balance array', () => {
+      const balance: DeepgramBalance[] = [{ amount: 50, units: 'USD' }]
+      const state = reducer(undefined, setApiBalance(balance))
+      expect(state.apiBalance).toEqual(balance)
+    })
+  })
+
+  describe('session list management', () => {
+    it('setSessions replaces the entire session list', () => {
+      const summaries = [makeSessionSummary(), makeSessionSummary()]
+      const state = reducer(undefined, setSessions(summaries))
+      expect(state.sessions).toHaveLength(2)
+    })
+
+    it('addSessionSummary prepends a new summary', () => {
+      const existing = makeSessionSummary({ id: 'existing-id' })
+      const baseState = reducer(undefined, setSessions([existing]))
+      const newSummary = makeSessionSummary({ id: 'new-id' })
+      const state = reducer(baseState, addSessionSummary(newSummary))
+      expect(state.sessions).toHaveLength(2)
+      expect(state.sessions[0]!.id).toBe('new-id')
+    })
+
+    it('addSessionSummary deduplicates by id', () => {
+      const existing = makeSessionSummary({ id: 'same-id', title: 'Old' })
+      const baseState = reducer(undefined, setSessions([existing]))
+      const updated = makeSessionSummary({ id: 'same-id', title: 'New' })
+      const state = reducer(baseState, addSessionSummary(updated))
+      expect(state.sessions).toHaveLength(1)
+      expect(state.sessions[0]!.title).toBe('New')
+    })
+
+    it('replaceSessionSummary updates an existing summary in place', () => {
+      const existing = makeSessionSummary({ id: 'a', title: 'Old' })
+      const baseState = reducer(undefined, setSessions([existing]))
+      const updated = makeSessionSummary({ id: 'a', title: 'Updated' })
+      const state = reducer(baseState, replaceSessionSummary(updated))
+      expect(state.sessions[0]!.title).toBe('Updated')
+    })
+
+    it('replaceSessionSummary inserts when id is not found', () => {
+      const baseState = reducer(undefined, setSessions([]))
+      const newSummary = makeSessionSummary({ id: 'missing' })
+      const state = reducer(baseState, replaceSessionSummary(newSummary))
+      expect(state.sessions).toHaveLength(1)
+      expect(state.sessions[0]!.id).toBe('missing')
+    })
+
+    it('removeSessionSummary removes by id', () => {
+      const s1 = makeSessionSummary({ id: 'keep' })
+      const s2 = makeSessionSummary({ id: 'remove' })
+      const baseState = reducer(undefined, setSessions([s1, s2]))
+      const state = reducer(baseState, removeSessionSummary('remove'))
+      expect(state.sessions).toHaveLength(1)
+      expect(state.sessions[0]!.id).toBe('keep')
+    })
+  })
+
+  describe('current session', () => {
+    it('setCurrentSession sets the active session and clears interim', () => {
+      const baseState = reducer(
+        undefined,
+        receiveTranscriptResult({
+          source: 'microphone',
+          text: 'partial',
+          isFinal: false,
+          speechFinal: false,
+          confidence: 0.5,
+        }),
+      )
+      const doc = makeSessionDocument()
+      const state = reducer(baseState, setCurrentSession(doc))
+      expect(state.currentSession?.id).toBe(doc.id)
+      expect(state.interim.microphone).toBe('')
+    })
+
+    it('setCurrentSession accepts null to clear the session', () => {
+      const state = reducer(undefined, setCurrentSession(null))
+      expect(state.currentSession).toBeNull()
+    })
+
+    it('replaceCurrentSession updates the current session when ids match', () => {
+      const doc = makeSessionDocument({ id: 'match', title: 'Old' })
+      const baseState = reducer(undefined, setCurrentSession(doc))
+      const updated = makeSessionDocument({ id: 'match', title: 'New' })
+      const state = reducer(baseState, replaceCurrentSession(updated))
+      expect(state.currentSession?.title).toBe('New')
+    })
+
+    it('replaceCurrentSession does not update when ids do not match', () => {
+      const doc = makeSessionDocument({ id: 'original', title: 'Old' })
+      const baseState = reducer(undefined, setCurrentSession(doc))
+      const unrelated = makeSessionDocument({ id: 'other', title: 'Other' })
+      const state = reducer(baseState, replaceCurrentSession(unrelated))
+      expect(state.currentSession?.title).toBe('Old')
+    })
+  })
+
+  describe('session state', () => {
+    it('setSessionState updates the session lifecycle state', () => {
+      const event: SessionStateEvent = { state: 'recording', transcriptId: 's1' }
+      const state = reducer(undefined, setSessionState(event))
+      expect(state.session.state).toBe('recording')
+    })
+
+    it('clears levels and interim when idle', () => {
+      const baseState = reducer(undefined, setAudioLevel({ source: 'microphone', level: 0.8 }))
+      const state = reducer(baseState, setSessionState({ state: 'idle' }))
+      expect(state.levels.microphone).toBe(0)
+      expect(state.levels.speaker).toBe(0)
+      expect(state.interim.microphone).toBe('')
+    })
+  })
+
+  describe('transcript results', () => {
+    it('sets interim text for non-final results', () => {
+      const event = makeTranscriptResult({ isFinal: false, text: 'partial...' })
+      const state = reducer(undefined, receiveTranscriptResult(event))
+      expect(state.interim.microphone).toBe('partial...')
+    })
+
+    it('clears interim text on final results', () => {
+      const baseState = reducer(
+        undefined,
+        receiveTranscriptResult({
+          source: 'microphone',
+          text: 'partial',
+          isFinal: false,
+          speechFinal: false,
+          confidence: 0.5,
+        }),
+      )
+      const finalEvent = makeTranscriptResult({ isFinal: true })
+      const state = reducer(baseState, receiveTranscriptResult(finalEvent))
+      expect(state.interim.microphone).toBe('')
+    })
+
+    it('appends segment to current session on final result with segment', () => {
+      const doc = makeSessionDocument({ segments: [] })
+      const baseState = reducer(undefined, setCurrentSession(doc))
+      const segment: TranscriptSegment = {
+        id: randomUUID(),
+        source: 'microphone',
+        text: 'finalized text',
+        confidence: 0.99,
+        createdAt: new Date().toISOString(),
+        offsetMs: 1000,
+      }
+      const event = makeTranscriptResult({ isFinal: true, segment })
+      const state = reducer(baseState, receiveTranscriptResult(event))
+      expect(state.currentSession?.segments).toHaveLength(1)
+      expect(state.currentSession?.segments[0]?.text).toBe('finalized text')
+    })
+  })
+
+  describe('translation results', () => {
+    it('appends translation to the current session', () => {
+      const doc = makeSessionDocument({ id: 's1', translations: [] })
+      const baseState = reducer(undefined, setCurrentSession(doc))
+      const event = makeTranslationResult({ transcriptId: 's1' })
+      const state = reducer(baseState, receiveTranslationResult(event))
+      expect(state.currentSession?.translations).toHaveLength(1)
+    })
+
+    it('does not duplicate existing translations by id', () => {
+      const translation = {
+        id: 't1',
+        provider: 'google' as const,
+        sourceText: 'hello',
+        text: 'merhaba',
+        sourceLanguage: 'en',
+        targetLanguage: 'tr' as const,
+        sourceSegmentIds: [randomUUID()],
+        sourceStartIndex: 0,
+        sourceEndIndex: 1,
+        createdAt: new Date().toISOString(),
+      }
+      const doc = makeSessionDocument({ id: 's1', translations: [translation] })
+      const baseState = reducer(undefined, setCurrentSession(doc))
+      const event = makeTranslationResult({
+        transcriptId: 's1',
+        translation: { ...translation },
+      })
+      const state = reducer(baseState, receiveTranslationResult(event))
+      expect(state.currentSession?.translations).toHaveLength(1)
+    })
+
+    it('does not append when transcriptId does not match current session', () => {
+      const doc = makeSessionDocument({ id: 's1', translations: [] })
+      const baseState = reducer(undefined, setCurrentSession(doc))
+      const event = makeTranslationResult({ transcriptId: 'other-session' })
+      const state = reducer(baseState, receiveTranslationResult(event))
+      expect(state.currentSession?.translations).toHaveLength(0)
+    })
+  })
+
+  describe('audio levels', () => {
+    it('sets the audio level for microphone', () => {
+      const state = reducer(undefined, setAudioLevel({ source: 'microphone', level: 0.5 }))
+      expect(state.levels.microphone).toBe(0.5)
+    })
+
+    it('sets the audio level for speaker', () => {
+      const state = reducer(undefined, setAudioLevel({ source: 'speaker', level: 0.75 }))
+      expect(state.levels.speaker).toBe(0.75)
+    })
+  })
+
+  describe('update state', () => {
+    it('sets the update lifecycle event', () => {
+      const event: UpdateStateEvent = {
+        state: 'available',
+        version: '4.0.0',
+      }
+      const state = reducer(undefined, setUpdateState(event))
+      expect(state.update.state).toBe('available')
+      expect(state.update.version).toBe('4.0.0')
+    })
+  })
+
+  describe('UI toggles', () => {
+    it('toggles the sessions sidebar', () => {
+      const state = reducer(undefined, setSessionsSidebarOpen(false))
+      expect(state.sessionsSidebarOpen).toBe(false)
+    })
+
+    it('toggles compact mode', () => {
+      const state = reducer(undefined, setCompactMode(true))
+      expect(state.compactMode).toBe(true)
+    })
   })
 })

@@ -15,6 +15,7 @@
     "allowSyntheticDefaultImports": true,
     "paths": {
       "@main/*": ["./src/main/*"],
+      "@renderer/*": ["./src/renderer/src/*"],
       "@shared/*": ["./src/shared/*"]
     }
   },
@@ -24,6 +25,7 @@
     "eslint.config.mjs",
     "src/main/**/*.ts",
     "src/preload/**/*.ts",
+    "src/renderer/src/i18n/index.ts",
     "src/renderer/src/i18n/locales/*.ts",
     "src/renderer/src/store/appSlice.ts",
     "src/renderer/src/services/SettingsPersistenceQueue.ts",
