@@ -8,7 +8,10 @@ import deDE from 'antd/locale/de_DE'
 import enUS from 'antd/locale/en_US'
 import esES from 'antd/locale/es_ES'
 import frFR from 'antd/locale/fr_FR'
+import jaJP from 'antd/locale/ja_JP'
+import koKR from 'antd/locale/ko_KR'
 import ptPT from 'antd/locale/pt_PT'
+import ruRU from 'antd/locale/ru_RU'
 import trTR from 'antd/locale/tr_TR'
 import zhCN from 'antd/locale/zh_CN'
 import type { AppLocale } from '@shared/types'
@@ -17,7 +20,18 @@ import { useTheme } from './ThemeProvider'
 
 /** Resolves an Ant Design locale from the application locale. */
 const getAntdLocale = (locale: AppLocale) => {
-  const locales = { en: enUS, tr: trTR, de: deDE, fr: frFR, pt: ptPT, zh: zhCN, es: esES }
+  const locales = {
+    en: enUS,
+    tr: trTR,
+    de: deDE,
+    fr: frFR,
+    pt: ptPT,
+    zh: zhCN,
+    es: esES,
+    ru: ruRU,
+    ja: jaJP,
+    ko: koKR,
+  }
   return locales[locale]
 }
 

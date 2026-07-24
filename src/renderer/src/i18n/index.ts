@@ -9,7 +9,10 @@ import de from './locales/de'
 import en from './locales/en'
 import es from './locales/es'
 import fr from './locales/fr'
+import ja from './locales/ja'
+import ko from './locales/ko'
 import pt from './locales/pt'
+import ru from './locales/ru'
 import tr from './locales/tr'
 import zh from './locales/zh'
 
@@ -24,6 +27,9 @@ const resources = {
   pt: { translation: pt },
   zh: { translation: zh },
   es: { translation: es },
+  ru: { translation: ru },
+  ja: { translation: ja },
+  ko: { translation: ko },
 } satisfies Record<AppLocale, { translation: LocaleResource }>
 
 /** Resolves the operating-system locale until persisted settings finish loading. */

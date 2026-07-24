@@ -11,7 +11,7 @@ import {
 import type { TranslationProvider, TranslationTargetLanguage } from './translation'
 
 export const AUDIO_SOURCES = ['microphone', 'speaker'] as const
-export const APP_LOCALES = ['en', 'tr', 'de', 'fr', 'pt', 'zh', 'es'] as const
+export const APP_LOCALES = ['en', 'tr', 'de', 'fr', 'pt', 'zh', 'es', 'ru', 'ja', 'ko'] as const
 export const THEME_MODES = ['system', 'light', 'dark'] as const
 export const TIME_FORMATS = ['24-hour', '12-hour'] as const
 export const SESSION_FORMATS = ['txt', 'json'] as const

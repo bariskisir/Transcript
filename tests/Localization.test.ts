@@ -11,7 +11,10 @@ import de from '../src/renderer/src/i18n/locales/de'
 import en from '../src/renderer/src/i18n/locales/en'
 import es from '../src/renderer/src/i18n/locales/es'
 import fr from '../src/renderer/src/i18n/locales/fr'
+import ja from '../src/renderer/src/i18n/locales/ja'
+import ko from '../src/renderer/src/i18n/locales/ko'
 import pt from '../src/renderer/src/i18n/locales/pt'
+import ru from '../src/renderer/src/i18n/locales/ru'
 import tr from '../src/renderer/src/i18n/locales/tr'
 import zh from '../src/renderer/src/i18n/locales/zh'
 
@@ -43,6 +46,9 @@ const locales: Record<AppLocale, Record<string, unknown>> = {
   pt: pt as unknown as Record<string, unknown>,
   zh: zh as unknown as Record<string, unknown>,
   es: es as unknown as Record<string, unknown>,
+  ru: ru as unknown as Record<string, unknown>,
+  ja: ja as unknown as Record<string, unknown>,
+  ko: ko as unknown as Record<string, unknown>,
 }
 
 describe('getInitialLanguage', () => {
@@ -109,6 +115,33 @@ describe('getInitialLanguage', () => {
     expect(getInitialLanguage()).toBe('es')
   })
 
+  it('returns ru when navigator.language starts with ru', () => {
+    Object.defineProperty(globalThis, 'navigator', {
+      value: { language: 'ru-RU' },
+      writable: true,
+      configurable: true,
+    })
+    expect(getInitialLanguage()).toBe('ru')
+  })
+
+  it('returns ja when navigator.language starts with ja', () => {
+    Object.defineProperty(globalThis, 'navigator', {
+      value: { language: 'ja-JP' },
+      writable: true,
+      configurable: true,
+    })
+    expect(getInitialLanguage()).toBe('ja')
+  })
+
+  it('returns ko when navigator.language starts with ko', () => {
+    Object.defineProperty(globalThis, 'navigator', {
+      value: { language: 'ko-KR' },
+      writable: true,
+      configurable: true,
+    })
+    expect(getInitialLanguage()).toBe('ko')
+  })
+
   it('returns en when navigator.language is empty', () => {
     Object.defineProperty(globalThis, 'navigator', {
       value: { language: '' },
@@ -132,8 +165,8 @@ describe('getInitialLanguage', () => {
 describe('locale key consistency', () => {
   const englishKeys = collectKeys(locales.en).sort()
 
-  it('all 7 locales are defined', () => {
-    expect(Object.keys(locales)).toHaveLength(7)
+  it('all 10 locales are defined', () => {
+    expect(Object.keys(locales)).toHaveLength(10)
     for (const locale of APP_LOCALES) {
       expect(locales[locale]).toBeDefined()
     }
@@ -177,6 +210,21 @@ describe('locale key consistency', () => {
   it('Spanish has the same keys as English', () => {
     const esKeys = collectKeys(locales.es).sort()
     expect(esKeys).toEqual(englishKeys)
+  })
+
+  it('Russian has the same keys as English', () => {
+    const ruKeys = collectKeys(locales.ru).sort()
+    expect(ruKeys).toEqual(englishKeys)
+  })
+
+  it('Japanese has the same keys as English', () => {
+    const jaKeys = collectKeys(locales.ja).sort()
+    expect(jaKeys).toEqual(englishKeys)
+  })
+
+  it('Korean has the same keys as English', () => {
+    const koKeys = collectKeys(locales.ko).sort()
+    expect(koKeys).toEqual(englishKeys)
   })
 
   it('all locale values are non-empty strings', () => {
