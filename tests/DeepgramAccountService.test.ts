@@ -94,7 +94,7 @@ describe('DeepgramAccountService', () => {
         .mockResolvedValueOnce(mockBalancesResponse([{ amount: 10, units: 'usd' }]))
 
       const balances = await service.verifyAndGetBalance('dg-key')
-      expect(balances[0]!.units).toBe('USD')
+      expect(balances[0]?.units).toBe('USD')
     })
 
     it('passes the Authorization token header', async () => {
@@ -105,8 +105,8 @@ describe('DeepgramAccountService', () => {
       await service.verifyAndGetBalance('my-api-key')
 
       const calls = mockFetch.mock.calls
-      expect(calls[0]![1]!.headers.Authorization).toBe('Token my-api-key')
-      expect(calls[1]![1]!.headers.Authorization).toBe('Token my-api-key')
+      expect(calls[0]?.[1]?.headers.Authorization).toBe('Token my-api-key')
+      expect(calls[1]?.[1]?.headers.Authorization).toBe('Token my-api-key')
     })
   })
 
@@ -118,7 +118,7 @@ describe('DeepgramAccountService', () => {
 
       const balances = await service.getBalance('dg-key')
       expect(balances).toHaveLength(1)
-      expect(balances[0]!.amount).toBe(100)
+      expect(balances[0]?.amount).toBe(100)
     })
 
     it('returns an empty array when the projects API fails', async () => {

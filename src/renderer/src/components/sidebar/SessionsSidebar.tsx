@@ -64,12 +64,6 @@ const SessionsSidebar = (): React.JSX.Element => {
     setDeletingAll(false)
   }
 
-  /** Triggers a native save dialog to export the active session in the requested format. */
-  const exportActiveSession = async (format: 'txt' | 'json'): Promise<void> => {
-    if (!currentSession?.id) return
-    await actions.exportSession(currentSession.id, format)
-  }
-
   /** Exports every session as individual files in the requested format. */
   const exportAllSessions = async (format: 'txt' | 'json'): Promise<void> => {
     for (const item of sessions) {

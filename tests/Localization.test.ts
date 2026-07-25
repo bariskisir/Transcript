@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { getInitialLanguage, initializeI18n } from '../src/renderer/src/i18n/index'
+import { getInitialLanguage } from '../src/renderer/src/i18n/index'
 import { APP_LOCALES, type AppLocale } from '../src/shared/types'
 
 import de from '../src/renderer/src/i18n/locales/de'
@@ -17,12 +17,6 @@ import pt from '../src/renderer/src/i18n/locales/pt'
 import ru from '../src/renderer/src/i18n/locales/ru'
 import tr from '../src/renderer/src/i18n/locales/tr'
 import zh from '../src/renderer/src/i18n/locales/zh'
-
-type DeepKeys<T> = T extends object
-  ? {
-      [K in keyof T & string]: T[K] extends object ? `${K}.${DeepKeys<T[K]>}` : K
-    }[keyof T & string]
-  : never
 
 function collectKeys(obj: unknown, prefix = ''): string[] {
   if (typeof obj !== 'object' || obj === null) return [prefix]
@@ -231,11 +225,17 @@ describe('locale key consistency', () => {
     for (const [locale, resource] of Object.entries(locales)) {
       const keys = collectKeys(resource)
       for (const key of keys) {
-        const value = key.split('.').reduce((obj: any, part) => obj?.[part], resource)
+        const value: unknown = key
+          .split('.')
+          .reduce<Record<string, unknown> | undefined>(
+            (obj, part) => obj?.[part] as Record<string, unknown> | undefined,
+            resource as Record<string, unknown>,
+          )
         expect(typeof value, `Locale "${locale}" key "${key}" should be a string`).toBe('string')
-        expect(value.length, `Locale "${locale}" key "${key}" should not be empty`).toBeGreaterThan(
-          0,
-        )
+        expect(
+          (value as string).length,
+          `Locale "${locale}" key "${key}" should not be empty`,
+        ).toBeGreaterThan(0)
       }
     }
   })

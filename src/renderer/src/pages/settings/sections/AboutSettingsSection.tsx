@@ -20,7 +20,6 @@ const AboutSettingsSection = (): React.JSX.Element => {
 
   return (
     <div className={styles.settingContainer}>
-      <h1 className={styles.settingPageTitle}>{t('settings.about')}</h1>
       <div className={styles.aboutHero}>
         <img src={logoUrl} alt="" />
         <h2>{t('app.name')}</h2>

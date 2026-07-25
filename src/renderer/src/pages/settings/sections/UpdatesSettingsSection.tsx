@@ -43,7 +43,7 @@ const UpdatesSettingsSection = (): React.JSX.Element => {
 
   return (
     <div className={styles.settingContainer}>
-      <h1 className={styles.settingPageTitle}>{t('settings.updates')}</h1>
+      <h2 className={styles.groupTitle}>{t('settings.updates')}</h2>
       <section className={styles.settingGroup}>
         <div className={styles.settingRow}>
           <SettingLabel

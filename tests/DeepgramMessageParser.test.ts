@@ -32,9 +32,9 @@ describe('parseDeepgramMessage', () => {
       })
       const result = parseDeepgramMessage('microphone', message)
       expect(result).not.toBeNull()
-      expect(result!.text).toBe('Hello world.')
-      expect(result!.isFinal).toBe(true)
-      expect(result!.source).toBe('microphone')
+      expect(result?.text).toBe('Hello world.')
+      expect(result?.isFinal).toBe(true)
+      expect(result?.source).toBe('microphone')
     })
 
     it('parses a speech_final transcript message', () => {
@@ -46,9 +46,9 @@ describe('parseDeepgramMessage', () => {
       })
       const result = parseDeepgramMessage('speaker', message)
       expect(result).not.toBeNull()
-      expect(result!.text).toBe('Final utterance.')
-      expect(result!.speechFinal).toBe(true)
-      expect(result!.isFinal).toBe(true)
+      expect(result?.text).toBe('Final utterance.')
+      expect(result?.speechFinal).toBe(true)
+      expect(result?.isFinal).toBe(true)
     })
 
     it('parses an interim transcript message', () => {
@@ -61,9 +61,9 @@ describe('parseDeepgramMessage', () => {
       })
       const result = parseDeepgramMessage('microphone', message)
       expect(result).not.toBeNull()
-      expect(result!.isFinal).toBe(false)
-      expect(result!.speechFinal).toBe(false)
-      expect(result!.text).toBe('partial text')
+      expect(result?.isFinal).toBe(false)
+      expect(result?.speechFinal).toBe(false)
+      expect(result?.text).toBe('partial text')
     })
 
     it('trims whitespace from transcript', () => {
@@ -74,7 +74,7 @@ describe('parseDeepgramMessage', () => {
       })
       const result = parseDeepgramMessage('microphone', message)
       expect(result).not.toBeNull()
-      expect(result!.text).toBe('padded text')
+      expect(result?.text).toBe('padded text')
     })
 
     it('clamps confidence to 0-1 range', () => {
@@ -84,7 +84,7 @@ describe('parseDeepgramMessage', () => {
         },
       })
       const resultHigh = parseDeepgramMessage('microphone', messageHigh)
-      expect(resultHigh!.confidence).toBe(1)
+      expect(resultHigh?.confidence).toBe(1)
 
       const messageLow = makeResultsMessage({
         channel: {
@@ -92,7 +92,7 @@ describe('parseDeepgramMessage', () => {
         },
       })
       const resultLow = parseDeepgramMessage('microphone', messageLow)
-      expect(resultLow!.confidence).toBe(0)
+      expect(resultLow?.confidence).toBe(0)
     })
 
     it('uses confidence 0 when alternatives lack confidence', () => {
@@ -103,15 +103,15 @@ describe('parseDeepgramMessage', () => {
       })
       const result = parseDeepgramMessage('microphone', message)
       expect(result).not.toBeNull()
-      expect(result!.confidence).toBe(0)
+      expect(result?.confidence).toBe(0)
     })
 
     it('preserves the source field', () => {
       const message = makeResultsMessage({ is_final: true })
       const micResult = parseDeepgramMessage('microphone', message)
       const speakerResult = parseDeepgramMessage('speaker', message)
-      expect(micResult!.source).toBe('microphone')
-      expect(speakerResult!.source).toBe('speaker')
+      expect(micResult?.source).toBe('microphone')
+      expect(speakerResult?.source).toBe('speaker')
     })
   })
 

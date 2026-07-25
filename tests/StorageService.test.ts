@@ -7,11 +7,11 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
 import StorageService from '../src/main/services/StorageService'
-import type { SessionDocument, TranscriptSegment, DeleteSessionResult } from '../src/shared/types'
+import type { TranscriptSegment, DeleteSessionResult } from '../src/shared/types'
 
 const ROOT = '/fake/appdata/transcript'
 const SESSIONS_DIR = join(ROOT, 'sessions')
-const SETTINGS_PATH = join(ROOT, 'settings.json')
+const _SETTINGS_PATH = join(ROOT, 'settings.json')
 
 // Module-level file store so tests can reset it between cases.
 let fileStore: Record<string, string> = {}
@@ -115,7 +115,7 @@ describe('StorageService', () => {
 
       const loaded = await service.getSession(session.id)
       expect(loaded.segments).toHaveLength(1)
-      expect(loaded.segments[0]!.text).toBe('First segment')
+      expect(loaded.segments[0]?.text).toBe('First segment')
     })
 
     it('appends multiple segments in order', async () => {
@@ -127,8 +127,8 @@ describe('StorageService', () => {
 
       const loaded = await service.getSession(session.id)
       expect(loaded.segments).toHaveLength(2)
-      expect(loaded.segments[0]!.text).toBe('One')
-      expect(loaded.segments[1]!.text).toBe('Two')
+      expect(loaded.segments[0]?.text).toBe('One')
+      expect(loaded.segments[1]?.text).toBe('Two')
     })
 
     it('does nothing when appending an empty segment array', async () => {
@@ -197,7 +197,7 @@ describe('StorageService', () => {
       const result = await service.deleteSession(session.id)
       expect(result.deleted).toBe(true)
       expect(result.replacement).toBeDefined()
-      expect(result.replacement!.language).toBe(session.language)
+      expect(result.replacement?.language).toBe(session.language)
     })
 
     it('returns a replacement session with empty segments', async () => {
@@ -205,8 +205,8 @@ describe('StorageService', () => {
       await service.appendSegment(session.id, makeSegment({ text: 'hello' }))
       const result = await service.deleteSession(session.id)
       expect(result.replacement).toBeDefined()
-      expect(result.replacement!.segments).toEqual([])
-      expect(result.replacement!.translations).toEqual([])
+      expect(result.replacement?.segments).toEqual([])
+      expect(result.replacement?.translations).toEqual([])
     })
 
     it('returns deleted: false when trying to delete the last empty workspace', async () => {
@@ -247,7 +247,7 @@ describe('StorageService', () => {
 
       const summaryB = summaries.find((s) => s.id === b.id)
       expect(summaryB).toBeDefined()
-      expect(summaryB!.segmentCount).toBe(1)
+      expect(summaryB?.segmentCount).toBe(1)
     })
 
     it('returns summaries sorted by createdAt descending', async () => {

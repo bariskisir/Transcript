@@ -249,7 +249,7 @@ describe('settingsSchema', () => {
     expect(result.success).toBe(true)
     // The extra property should not appear in the parsed output
     if (result.success) {
-      expect((result.data as any).futureField).toBeUndefined()
+      expect((result.data as Record<string, unknown>).futureField).toBeUndefined()
     }
   })
 

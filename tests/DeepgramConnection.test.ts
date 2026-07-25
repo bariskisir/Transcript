@@ -9,14 +9,22 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 // so the vi.mock factory can reference them before they are fully initialised.
 
 const mockSocket = {
-  _events: {} as Record<string, (...args: any[]) => void>,
+  _events: {} as Record<string, (...args: unknown[]) => void>,
   readyState: 0,
   bufferedAmount: 0,
-  on: vi.fn(function (this: typeof mockSocket, event: string, handler: (...args: any[]) => void) {
+  on: vi.fn(function (
+    this: typeof mockSocket,
+    event: string,
+    handler: (...args: unknown[]) => void,
+  ) {
     this._events[event] = handler
     return this
   }),
-  once: vi.fn(function (this: typeof mockSocket, event: string, handler: (...args: any[]) => void) {
+  once: vi.fn(function (
+    this: typeof mockSocket,
+    event: string,
+    handler: (...args: unknown[]) => void,
+  ) {
     this._events[event] = handler
     return this
   }),
@@ -33,7 +41,7 @@ const mockSocket = {
     if (callback) callback()
   }),
   terminate: vi.fn(),
-  emit(event: string, ...args: any[]) {
+  emit(event: string, ...args: unknown[]) {
     const handler = this._events[event]
     if (handler) handler(...args)
   },
@@ -66,6 +74,13 @@ vi.mock('ws', () => ({
 import DeepgramConnection from '../src/main/services/DeepgramConnection'
 import { DEFAULT_DEEPGRAM_TRANSCRIPTION_SETTINGS } from '../src/shared/transcription'
 import type { DeepgramTranscriptionSettings } from '../src/shared/transcription'
+import type { TranscriptResultEvent, LogLevel } from '../src/shared/types'
+
+type DeepgramConnectionCallbacks = {
+  onResult: (event: TranscriptResultEvent) => void
+  onError: (message: string) => void
+  onDiagnostic: (level: LogLevel, message: string, details?: unknown) => void
+}
 
 function makeSettings(
   overrides: Partial<DeepgramTranscriptionSettings> = {},
@@ -88,9 +103,9 @@ describe('DeepgramConnection', () => {
       source: 'microphone',
       apiKey: 'test-key',
       settings: makeSettings(),
-      onResult: onResult as any,
-      onError: onError as any,
-      onDiagnostic: onDiagnostic as any,
+      onResult: onResult as unknown as DeepgramConnectionCallbacks['onResult'],
+      onError: onError as unknown as DeepgramConnectionCallbacks['onError'],
+      onDiagnostic: onDiagnostic as unknown as DeepgramConnectionCallbacks['onDiagnostic'],
     })
     mockSocket.reset()
   })
@@ -160,9 +175,9 @@ describe('DeepgramConnection', () => {
           alternatives: [{ transcript: 'Hello from Deepgram', confidence: 0.99 }],
         },
       })
-      const messageHandler = mockSocket._events['message']!
+      const messageHandler = mockSocket._events.message
       expect(messageHandler).toBeDefined()
-      messageHandler(resultsMsg, false)
+      messageHandler?.(resultsMsg, false)
 
       expect(onResult).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -180,8 +195,8 @@ describe('DeepgramConnection', () => {
       mockSocket.emit('open')
       await connectPromise
 
-      const messageHandler = mockSocket._events['message']!
-      messageHandler(Buffer.from([0x00, 0x01]), true)
+      const messageHandler = mockSocket._events.message
+      messageHandler?.(Buffer.from([0x00, 0x01]), true)
       expect(onResult).not.toHaveBeenCalled()
     })
   })
@@ -302,8 +317,8 @@ describe('DeepgramConnection', () => {
       await connectPromise
 
       vi.advanceTimersByTime(5_000)
-      const messages = mockSocket.send.mock.calls.map((call: any[]) => call[0])
-      const keepAliveCall = messages.find((msg: string) => {
+      const messages = mockSocket.send.mock.calls.map((call: unknown[]) => call[0]) as string[]
+      const keepAliveCall = messages.find((msg) => {
         try {
           return JSON.parse(msg).type === 'KeepAlive'
         } catch {

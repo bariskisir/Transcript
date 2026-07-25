@@ -33,8 +33,6 @@ const TranslationSettingsSection = (): React.JSX.Element => {
 
   return (
     <div className={styles.settingContainer}>
-      <h1 className={styles.settingPageTitle}>{t('settings.translation')}</h1>
-
       <h2 className={styles.groupTitle}>{t('settings.translationService')}</h2>
       <section className={styles.settingGroup}>
         <div className={styles.settingRow}>

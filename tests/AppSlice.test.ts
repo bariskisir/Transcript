@@ -37,6 +37,7 @@ import type {
   TranscriptSegment,
   SessionStateEvent,
 } from '../src/shared/types'
+import type { AppState } from '../src/renderer/src/store/appSlice'
 import { DEFAULT_SETTINGS } from '../src/shared/types'
 import { randomUUID } from 'node:crypto'
 
@@ -203,7 +204,10 @@ describe('appSlice', () => {
     })
 
     it('disables compact mode when navigating away from home', () => {
-      const state = reducer({ compactMode: true } as any, setPage('settings'))
+      const state = reducer(
+        { compactMode: true } as Partial<AppState> as AppState,
+        setPage('settings'),
+      )
       expect(state.compactMode).toBe(false)
     })
 
@@ -257,7 +261,7 @@ describe('appSlice', () => {
       const newSummary = makeSessionSummary({ id: 'new-id' })
       const state = reducer(baseState, addSessionSummary(newSummary))
       expect(state.sessions).toHaveLength(2)
-      expect(state.sessions[0]!.id).toBe('new-id')
+      expect(state.sessions[0]?.id).toBe('new-id')
     })
 
     it('addSessionSummary deduplicates by id', () => {
@@ -266,7 +270,7 @@ describe('appSlice', () => {
       const updated = makeSessionSummary({ id: 'same-id', title: 'New' })
       const state = reducer(baseState, addSessionSummary(updated))
       expect(state.sessions).toHaveLength(1)
-      expect(state.sessions[0]!.title).toBe('New')
+      expect(state.sessions[0]?.title).toBe('New')
     })
 
     it('replaceSessionSummary updates an existing summary in place', () => {
@@ -274,7 +278,7 @@ describe('appSlice', () => {
       const baseState = reducer(undefined, setSessions([existing]))
       const updated = makeSessionSummary({ id: 'a', title: 'Updated' })
       const state = reducer(baseState, replaceSessionSummary(updated))
-      expect(state.sessions[0]!.title).toBe('Updated')
+      expect(state.sessions[0]?.title).toBe('Updated')
     })
 
     it('replaceSessionSummary inserts when id is not found', () => {
@@ -282,7 +286,7 @@ describe('appSlice', () => {
       const newSummary = makeSessionSummary({ id: 'missing' })
       const state = reducer(baseState, replaceSessionSummary(newSummary))
       expect(state.sessions).toHaveLength(1)
-      expect(state.sessions[0]!.id).toBe('missing')
+      expect(state.sessions[0]?.id).toBe('missing')
     })
 
     it('removeSessionSummary removes by id', () => {
@@ -291,7 +295,7 @@ describe('appSlice', () => {
       const baseState = reducer(undefined, setSessions([s1, s2]))
       const state = reducer(baseState, removeSessionSummary('remove'))
       expect(state.sessions).toHaveLength(1)
-      expect(state.sessions[0]!.id).toBe('keep')
+      expect(state.sessions[0]?.id).toBe('keep')
     })
   })
 

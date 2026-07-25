@@ -420,8 +420,6 @@ const TranscriptionSettingsSection = (): React.JSX.Element => {
 
   return (
     <div className={styles.settingContainer}>
-      <h1 className={styles.settingPageTitle}>{t('settings.transcription')}</h1>
-
       <h2 className={styles.groupTitle}>{t('settings.transcriptionService')}</h2>
       <section className={styles.settingGroup}>
         <div className={styles.settingRow}>
