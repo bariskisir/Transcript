@@ -23,6 +23,7 @@ const App = (): React.JSX.Element => {
   const initialized = useAppSelector((state) => state.app.initialized)
   const page = useAppSelector((state) => state.app.page)
   const compactMode = useAppSelector((state) => state.app.compactMode)
+  const navbarPosition = useAppSelector((state) => state.app.settings.navbarPosition)
   const update = useAppSelector((state) => state.app.update)
   const desktopActions = useDesktopActions()
   const settingsActions = useSettingsActions()
@@ -39,9 +40,11 @@ const App = (): React.JSX.Element => {
 
   return (
     <div className={styles.shell}>
-      <Titlebar />
+      <Titlebar onSettingsChange={settingsActions.saveSettings} />
       <div className={styles.body}>
-        {!compactMode && <AppSidebar onSettingsChange={settingsActions.saveSettings} />}
+        {!compactMode && navbarPosition === 'left' && (
+          <AppSidebar onSettingsChange={settingsActions.saveSettings} />
+        )}
         <div className={styles.workspace}>
           {page === 'home' ? (
             <HomePage />

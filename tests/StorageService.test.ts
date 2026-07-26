@@ -319,16 +319,35 @@ describe('StorageService', () => {
       const settings = await service.loadSettings()
       expect(settings.settingsRevision).toBe(1)
       expect(settings.theme).toBe('system')
+      expect(settings.navbarPosition).toBe('top')
+      expect(settings.pageZoom).toBe(1)
+      expect(settings.showTrayIcon).toBe(true)
+      expect(settings.minimizeToTrayOnClose).toBe(true)
     })
 
     it('saves and reloads custom settings', async () => {
       const loaded = await service.loadSettings()
-      const updated = { ...loaded, theme: 'dark' as const }
+      const updated = {
+        ...loaded,
+        theme: 'dark' as const,
+        navbarPosition: 'top' as const,
+        pageZoom: 1.3,
+        showTrayIcon: true,
+        minimizeToTrayOnClose: true,
+      }
       const saved = await service.saveSettings(updated)
       expect(saved.theme).toBe('dark')
+      expect(saved.navbarPosition).toBe('top')
+      expect(saved.pageZoom).toBe(1.3)
+      expect(saved.showTrayIcon).toBe(true)
+      expect(saved.minimizeToTrayOnClose).toBe(true)
 
       const reloaded = await service.loadSettings()
       expect(reloaded.theme).toBe('dark')
+      expect(reloaded.navbarPosition).toBe('top')
+      expect(reloaded.pageZoom).toBe(1.3)
+      expect(reloaded.showTrayIcon).toBe(true)
+      expect(reloaded.minimizeToTrayOnClose).toBe(true)
     })
 
     it('merges OpenRouter settings without replacing Deepgram settings', async () => {

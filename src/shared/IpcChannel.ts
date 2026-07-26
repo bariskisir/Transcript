@@ -21,6 +21,10 @@ export enum IpcChannel {
   SessionTranslate = 'session:translate',
   SessionExport = 'session:export',
   WindowAlwaysOnTop = 'window:always-on-top',
+  WindowMinimize = 'window:minimize',
+  WindowToggleMaximize = 'window:toggle-maximize',
+  WindowClose = 'window:close',
+  WindowIsMaximized = 'window:is-maximized',
   ThemeSet = 'theme:set',
   ShellOpenExternal = 'shell:open-external',
   LogsOpenDirectory = 'logs:open-directory',
@@ -32,4 +36,6 @@ export enum IpcChannel {
   TranslationResult = 'event:translation-result',
   AppError = 'event:error',
   UpdateState = 'event:update-state',
+  WindowMaximizedChanged = 'event:window-maximized-changed',
+  SettingsOpenRequested = 'event:settings-open-requested',
 }

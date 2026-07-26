@@ -69,6 +69,14 @@ const api: TranscriptApi = {
     ),
   /** Changes the native always-on-top window state. */
   setAlwaysOnTop: (enabled) => ipcRenderer.invoke(IpcChannel.WindowAlwaysOnTop, enabled),
+  /** Minimizes the main application window. */
+  minimizeWindow: () => ipcRenderer.invoke(IpcChannel.WindowMinimize),
+  /** Toggles the main application window between maximized and restored states. */
+  toggleMaximizeWindow: () => ipcRenderer.invoke(IpcChannel.WindowToggleMaximize),
+  /** Closes the main application window. */
+  closeWindow: () => ipcRenderer.invoke(IpcChannel.WindowClose),
+  /** Retrieves the main application window's maximized state. */
+  isWindowMaximized: () => ipcRenderer.invoke(IpcChannel.WindowIsMaximized),
   /** Synchronizes native title-bar colors with the renderer theme. */
   setTheme: (theme) => ipcRenderer.invoke(IpcChannel.ThemeSet, theme),
   /** Opens one allow-listed HTTPS URL in the system browser. */
@@ -93,6 +101,12 @@ const api: TranscriptApi = {
   onError: (listener) => subscribe<AppErrorEvent>(IpcChannel.AppError, listener),
   /** Subscribes to updater lifecycle progress. */
   onUpdateState: (listener) => subscribe<UpdateStateEvent>(IpcChannel.UpdateState, listener),
+  /** Subscribes to maximize and restore state changes. */
+  onWindowMaximizedChange: (listener) =>
+    subscribe<boolean>(IpcChannel.WindowMaximizedChanged, listener),
+  /** Subscribes to settings navigation requested by the tray menu. */
+  onSettingsOpenRequested: (listener) =>
+    subscribe<void>(IpcChannel.SettingsOpenRequested, listener),
 }
 
 contextBridge.exposeInMainWorld('app', api)

@@ -16,6 +16,9 @@ import type { TranslationProvider, TranslationTargetLanguage } from './translati
 export const AUDIO_SOURCES = ['microphone', 'speaker'] as const
 export const APP_LOCALES = ['en', 'tr', 'de', 'fr', 'pt', 'zh', 'es', 'ru', 'ja', 'ko'] as const
 export const THEME_MODES = ['system', 'light', 'dark'] as const
+export const NAVBAR_POSITIONS = ['left', 'top'] as const
+/** Defines the supported page zoom range and control increment. */
+export const PAGE_ZOOM_LIMITS = { min: 0.5, max: 2, step: 0.1, default: 1 } as const
 export const TIME_FORMATS = ['24-hour', '12-hour'] as const
 export const SESSION_FORMATS = ['txt', 'json'] as const
 export const LOG_LEVELS = ['error', 'warn', 'info', 'debug', 'verbose'] as const
@@ -23,6 +26,7 @@ export const LOG_LEVELS = ['error', 'warn', 'info', 'debug', 'verbose'] as const
 export type AudioSource = (typeof AUDIO_SOURCES)[number]
 export type AppLocale = (typeof APP_LOCALES)[number]
 export type ThemeMode = (typeof THEME_MODES)[number]
+export type NavbarPosition = (typeof NAVBAR_POSITIONS)[number]
 export type TimeFormat = (typeof TIME_FORMATS)[number]
 export type SessionFormat = (typeof SESSION_FORMATS)[number]
 export type LogLevel = (typeof LOG_LEVELS)[number]
@@ -32,6 +36,8 @@ export interface AppSettings {
   settingsRevision: 1
   uiLanguage: AppLocale
   theme: ThemeMode
+  navbarPosition: NavbarPosition
+  pageZoom: number
   timeFormat: TimeFormat
   transcriptionProvider: TranscriptionProvider
   transcriptionProviderSettings: TranscriptionProviderSettings
@@ -43,6 +49,8 @@ export interface AppSettings {
   speakerDeviceId: string
   speakerEnabled: boolean
   alwaysOnTop: boolean
+  showTrayIcon: boolean
+  minimizeToTrayOnClose: boolean
   autoUpdate: boolean
   logLevel: LogLevel
 }
@@ -58,6 +66,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   settingsRevision: 1,
   uiLanguage: 'en',
   theme: 'system',
+  navbarPosition: 'top',
+  pageZoom: PAGE_ZOOM_LIMITS.default,
   timeFormat: '24-hour',
   transcriptionProvider: 'deepgram',
   transcriptionProviderSettings: {
@@ -72,6 +82,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   speakerDeviceId: 'default',
   speakerEnabled: true,
   alwaysOnTop: false,
+  showTrayIcon: true,
+  minimizeToTrayOnClose: true,
   autoUpdate: true,
   logLevel: 'info',
 }
@@ -246,6 +258,14 @@ export interface TranscriptApi {
   ): Promise<boolean>
   /** Changes the native always-on-top state. */
   setAlwaysOnTop(enabled: boolean): Promise<void>
+  /** Minimizes the main application window. */
+  minimizeWindow(): Promise<void>
+  /** Toggles maximized state and returns the resulting state. */
+  toggleMaximizeWindow(): Promise<boolean>
+  /** Closes the main application window through its graceful shutdown path. */
+  closeWindow(): Promise<void>
+  /** Reports whether the main application window is maximized. */
+  isWindowMaximized(): Promise<boolean>
   /** Synchronizes native window chrome with the resolved renderer theme. */
   setTheme(theme: Exclude<ThemeMode, 'system'>): Promise<void>
   /** Opens an allow-listed URL in the system browser. */
@@ -268,4 +288,8 @@ export interface TranscriptApi {
   onError(listener: (event: AppErrorEvent) => void): () => void
   /** Subscribes to updater lifecycle events. */
   onUpdateState(listener: (event: UpdateStateEvent) => void): () => void
+  /** Subscribes to native maximize and restore state changes. */
+  onWindowMaximizedChange(listener: (maximized: boolean) => void): () => void
+  /** Subscribes to settings navigation requested from native desktop UI. */
+  onSettingsOpenRequested(listener: () => void): () => void
 }

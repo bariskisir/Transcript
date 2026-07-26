@@ -18,6 +18,8 @@ import {
   APP_LOCALES,
   DEFAULT_SETTINGS,
   LOG_LEVELS,
+  NAVBAR_POSITIONS,
+  PAGE_ZOOM_LIMITS,
   TIME_FORMATS,
   THEME_MODES,
   type AppSettings,
@@ -58,6 +60,8 @@ const settingsFieldsSchema = z.object({
   settingsRevision: z.literal(1),
   uiLanguage: z.enum(APP_LOCALES),
   theme: z.enum(THEME_MODES),
+  navbarPosition: z.enum(NAVBAR_POSITIONS),
+  pageZoom: z.number().min(PAGE_ZOOM_LIMITS.min).max(PAGE_ZOOM_LIMITS.max),
   timeFormat: z.enum(TIME_FORMATS),
   transcriptionProvider: z.enum(TRANSCRIPTION_PROVIDERS),
   transcriptionProviderSettings: transcriptionProviderSettingsSchema,
@@ -69,11 +73,20 @@ const settingsFieldsSchema = z.object({
   speakerDeviceId: z.string().max(512),
   speakerEnabled: z.boolean(),
   alwaysOnTop: z.boolean(),
+  showTrayIcon: z.boolean(),
+  minimizeToTrayOnClose: z.boolean(),
   autoUpdate: z.boolean(),
   logLevel: z.enum(LOG_LEVELS),
 })
 
 export const settingsSchema = settingsFieldsSchema.superRefine((settings, context) => {
+  if (settings.minimizeToTrayOnClose && !settings.showTrayIcon) {
+    context.addIssue({
+      code: 'custom',
+      path: ['minimizeToTrayOnClose'],
+      message: 'Minimize to tray requires the tray icon to be enabled.',
+    })
+  }
   const deepgram = settings.transcriptionProviderSettings.deepgram
   if (deepgram.redaction !== 'none' && !deepgram.language.startsWith('en')) {
     context.addIssue({

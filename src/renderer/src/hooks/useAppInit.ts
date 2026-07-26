@@ -10,6 +10,7 @@ import {
   hydrate,
   receiveTranscriptResult,
   receiveTranslationResult,
+  setPage,
   setSessionState,
   setUpdateState,
 } from '@renderer/store/appSlice'
@@ -34,6 +35,7 @@ export const useAppInit = (): void => {
       window.app.onTranscriptResult((event) => dispatch(receiveTranscriptResult(event))),
       window.app.onTranslationResult((event) => dispatch(receiveTranslationResult(event))),
       window.app.onUpdateState((event) => dispatch(setUpdateState(event))),
+      window.app.onSettingsOpenRequested(() => dispatch(setPage('settings'))),
       window.app.onError((event) => {
         logger.error('Main process reported an application error.', event.message)
         void messageRef.current.error(

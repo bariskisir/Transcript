@@ -40,17 +40,42 @@ describe('parsePersistedSettings', () => {
     expect(result.settingsRevision).toBe(1)
     expect(result.transcriptionProvider).toBe('deepgram')
     expect(result.theme).toBe('system')
+    expect(result.navbarPosition).toBe('top')
+    expect(result.pageZoom).toBe(1)
+    expect(result.showTrayIcon).toBe(true)
+    expect(result.minimizeToTrayOnClose).toBe(true)
   })
 
-  it('preserves valid theme and ui language from partial input', () => {
-    const result = parsePersistedSettings({ theme: 'dark', uiLanguage: 'tr' })
+  it('preserves valid display and language settings from partial input', () => {
+    const result = parsePersistedSettings({
+      theme: 'dark',
+      navbarPosition: 'top',
+      pageZoom: 1.4,
+      showTrayIcon: true,
+      minimizeToTrayOnClose: true,
+      uiLanguage: 'tr',
+    })
     expect(result.theme).toBe('dark')
+    expect(result.navbarPosition).toBe('top')
+    expect(result.pageZoom).toBe(1.4)
+    expect(result.showTrayIcon).toBe(true)
+    expect(result.minimizeToTrayOnClose).toBe(true)
     expect(result.uiLanguage).toBe('tr')
   })
 
   it('falls back to defaults for unknown theme values', () => {
     const result = parsePersistedSettings({ theme: 'neon' })
     expect(result.theme).toBe('system')
+  })
+
+  it('falls back to the top navbar for an unknown position', () => {
+    const result = parsePersistedSettings({ navbarPosition: 'bottom' })
+    expect(result.navbarPosition).toBe('top')
+  })
+
+  it('falls back to the default zoom for an out-of-range value', () => {
+    const result = parsePersistedSettings({ pageZoom: 2.1 })
+    expect(result.pageZoom).toBe(1)
   })
 
   it('falls back to defaults for unknown ui language', () => {
@@ -196,6 +221,15 @@ describe('settingsSchema', () => {
     expect(settingsSchema.safeParse(custom).success).toBe(true)
   })
 
+  it('rejects close-to-tray when the tray icon is disabled', () => {
+    const result = settingsSchema.safeParse({
+      ...validSettings,
+      showTrayIcon: false,
+      minimizeToTrayOnClose: true,
+    })
+    expect(result.success).toBe(false)
+  })
+
   it('accepts a dynamically discovered Deepgram model identifier', () => {
     const dynamic = {
       ...validSettings,
@@ -321,6 +355,34 @@ describe('settingsPatchSchema', () => {
   it('accepts a single valid field change', () => {
     const result = settingsPatchSchema.safeParse({ theme: 'dark' })
     expect(result.success).toBe(true)
+  })
+
+  it('accepts a valid navbar position change', () => {
+    const result = settingsPatchSchema.safeParse({ navbarPosition: 'top' })
+    expect(result.success).toBe(true)
+  })
+
+  it('rejects an unknown navbar position', () => {
+    const result = settingsPatchSchema.safeParse({ navbarPosition: 'bottom' })
+    expect(result.success).toBe(false)
+  })
+
+  it('accepts a valid page zoom change', () => {
+    const result = settingsPatchSchema.safeParse({ pageZoom: 1.5 })
+    expect(result.success).toBe(true)
+  })
+
+  it('accepts an atomic tray settings change', () => {
+    const result = settingsPatchSchema.safeParse({
+      showTrayIcon: true,
+      minimizeToTrayOnClose: true,
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it.each([0.4, 2.1])('rejects the out-of-range page zoom %s', (pageZoom) => {
+    const result = settingsPatchSchema.safeParse({ pageZoom })
+    expect(result.success).toBe(false)
   })
 
   it('accepts multiple valid field changes', () => {

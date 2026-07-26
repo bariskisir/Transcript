@@ -1,6 +1,6 @@
 {
   "name": "transcript",
-  "version": "3.5.0",
+  "version": "3.6.0",
   "description": "Secure real-time desktop transcription",
   "main": "./out/main/index.js",
   "author": "bariskisir",
@@ -69,6 +69,12 @@
       "out/**/*",
       "package.json",
       "LICENSE"
+    ],
+    "extraResources": [
+      {
+        "from": "build/icon.png",
+        "to": "icon.png"
+      }
     ],
     "win": {
       "icon": "build/icon.ico",

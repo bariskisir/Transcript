@@ -124,6 +124,26 @@
   gap: 8px;
 }
 
+.segmentedOption {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.zoomControl {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.zoomValue {
+  width: 48px;
+  color: var(--color-text-1);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
 .compactControl {
   width: 170px;
 }

@@ -21,6 +21,7 @@ import LoggerService from './services/LoggerService'
 
 import StorageService from './services/StorageService'
 import TranscriptService from './services/TranscriptService'
+import TrayService from './services/TrayService'
 import TranslationProviderService from './services/TranslationProviderService'
 import WindowService from './services/WindowService'
 
@@ -29,6 +30,7 @@ const applicationPaths = configureApplicationPaths()
 const hasSingleInstanceLock = app.requestSingleInstanceLock()
 let transcriptService: TranscriptService | null = null
 let loggerService: LoggerService | null = null
+let trayService: TrayService | null = null
 
 /** Creates all services and binds them to a newly opened window. */
 const openApplicationWindow = async (): Promise<void> => {
@@ -55,6 +57,9 @@ const openApplicationWindow = async (): Promise<void> => {
   )
   const updater = new AppUpdater(logger)
   const window = await windowService.createWindow(logger)
+  trayService?.dispose()
+  const tray = new TrayService(window, settings, logger)
+  trayService = tray
 
   transcriptService = new TranscriptService(
     storage,
@@ -76,6 +81,11 @@ const openApplicationWindow = async (): Promise<void> => {
   )
   let closeApproved = false
   window.on('close', (event) => {
+    if (tray.shouldMinimizeOnClose()) {
+      event.preventDefault()
+      window.hide()
+      return
+    }
     const activeTranscriptService = transcriptService
     if (closeApproved || !activeTranscriptService) return
     event.preventDefault()
@@ -97,6 +107,7 @@ const openApplicationWindow = async (): Promise<void> => {
     openRouterAccount,
     openRouterCatalog,
     transcript: transcriptService,
+    tray,
     updater,
     logger,
   })
@@ -152,6 +163,7 @@ if (!hasSingleInstanceLock) {
 }
 
 app.on('before-quit', () => {
+  trayService?.prepareToQuit()
   void transcriptService?.stop().catch((error: unknown) => {
     loggerService?.error('Application', 'Recording cleanup failed before quit.', error)
   })

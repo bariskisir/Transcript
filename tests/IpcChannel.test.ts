@@ -48,8 +48,13 @@ describe('IpcChannel', () => {
     expect(channels).toContain('session:export')
   })
 
-  it('includes the required window channel', () => {
+  it('includes the required window channels', () => {
     expect(channels).toContain('window:always-on-top')
+    expect(channels).toContain('window:minimize')
+    expect(channels).toContain('window:toggle-maximize')
+    expect(channels).toContain('window:close')
+    expect(channels).toContain('window:is-maximized')
+    expect(channels).toContain('event:window-maximized-changed')
   })
 
   it('includes the required theme channel', () => {
@@ -73,5 +78,6 @@ describe('IpcChannel', () => {
   it('includes the required error and update-state events', () => {
     expect(channels).toContain('event:error')
     expect(channels).toContain('event:update-state')
+    expect(channels).toContain('event:settings-open-requested')
   })
 })

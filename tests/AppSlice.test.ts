@@ -225,8 +225,8 @@ describe('appSlice', () => {
 
   describe('setSettingsSection', () => {
     it('sets the active settings category', () => {
-      const state = reducer(undefined, setSettingsSection('transcription'))
-      expect(state.settingsSection).toBe('transcription')
+      const state = reducer(undefined, setSettingsSection('display'))
+      expect(state.settingsSection).toBe('display')
     })
   })
 

@@ -2,12 +2,21 @@
  * Renders the reusable settings shell and delegates each category to an isolated section.
  */
 
-import { AudioLines, Info, Languages, RefreshCw, ScrollText, Settings2 } from 'lucide-react'
+import {
+  AudioLines,
+  Info,
+  Languages,
+  Monitor,
+  RefreshCw,
+  ScrollText,
+  Settings2,
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
 import { setSettingsSection, type SettingsSection } from '@renderer/store/appSlice'
 import AboutSettingsSection from './sections/AboutSettingsSection'
 import GeneralSettingsSection from './sections/GeneralSettingsSection'
+import DisplaySettingsSection from './sections/DisplaySettingsSection'
 import LoggingSettingsSection from './sections/LoggingSettingsSection'
 import TranscriptionSettingsSection from './sections/TranscriptionSettingsSection'
 import TranslationSettingsSection from './sections/TranslationSettingsSection'
@@ -25,6 +34,7 @@ const SettingsPage = (): React.JSX.Element => {
     icon: React.JSX.Element
   }> = [
     { key: 'general', label: t('settings.general'), icon: <Settings2 size={17} /> },
+    { key: 'display', label: t('settings.display'), icon: <Monitor size={17} /> },
     {
       key: 'transcription',
       label: t('settings.transcription'),
@@ -42,6 +52,7 @@ const SettingsPage = (): React.JSX.Element => {
 
   /** Resolves the active category component without keeping inactive forms mounted. */
   const renderSection = (): React.JSX.Element => {
+    if (section === 'display') return <DisplaySettingsSection />
     if (section === 'transcription') return <TranscriptionSettingsSection />
     if (section === 'translation') return <TranslationSettingsSection />
     if (section === 'updates') return <UpdatesSettingsSection />

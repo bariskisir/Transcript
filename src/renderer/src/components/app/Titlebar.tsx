@@ -16,15 +16,24 @@ import logoUrl from '../../../../../build/icon.svg'
 import { useRecordingActions } from '@renderer/hooks/useRecordingActions'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
 import { useTheme } from '@renderer/context/ThemeProvider'
+import type { AppSettingsPatch } from '@shared/types'
 import { setCompactMode, setPage, setSessionsSidebarOpen } from '@renderer/store/appSlice'
+import AppNavigationActions from './AppNavigationActions'
+import WindowControls from './WindowControls'
 import styles from './Titlebar.module.scss'
 
+interface TitlebarProps {
+  onSettingsChange: (patch: AppSettingsPatch) => Promise<void>
+}
+
 /** Places primary navigation and transcript-sidebar control beside each other at the top-left. */
-const Titlebar = (): React.JSX.Element => {
+const Titlebar = ({ onSettingsChange }: TitlebarProps): React.JSX.Element => {
   const dispatch = useAppDispatch()
   const page = useAppSelector((state) => state.app.page)
   const sidebarOpen = useAppSelector((state) => state.app.sessionsSidebarOpen)
   const compactMode = useAppSelector((state) => state.app.compactMode)
+  const navbarPosition = useAppSelector((state) => state.app.settings.navbarPosition)
+  const platform = useAppSelector((state) => state.app.platform)
   const session = useAppSelector((state) => state.app.session.state)
   const { t } = useTranslation()
   const { theme } = useTheme()
@@ -35,7 +44,9 @@ const Titlebar = (): React.JSX.Element => {
   const canStop = session === 'connecting' || recording
 
   return (
-    <header className={`${styles.container} drag-region`}>
+    <header
+      className={`${styles.container} ${platform === 'darwin' ? styles.nativeWindowControls : ''} drag-region`}
+    >
       <div className={`${styles.topActions} no-drag`}>
         <Tooltip placement="bottom" title={t('nav.sessions')}>
           <Button
@@ -93,6 +104,12 @@ const Titlebar = (): React.JSX.Element => {
             {canStop ? t('controls.stop') : t('controls.start')}
           </Button>
         )}
+      </div>
+      <div className={styles.rightActions}>
+        {navbarPosition === 'top' && !compactMode && (
+          <AppNavigationActions placement="top" onSettingsChange={onSettingsChange} />
+        )}
+        <WindowControls />
       </div>
     </header>
   )

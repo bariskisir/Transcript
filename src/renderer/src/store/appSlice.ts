@@ -21,7 +21,7 @@ import type { TranscriptionProvider } from '@shared/transcription'
 
 export type AppPage = 'home' | 'settings'
 export type SettingsSection =
-  'general' | 'transcription' | 'translation' | 'updates' | 'about' | 'logging'
+  'general' | 'display' | 'transcription' | 'translation' | 'updates' | 'about' | 'logging'
 
 export interface AppState {
   initialized: boolean

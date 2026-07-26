@@ -13,21 +13,3 @@
   border-right: 0.5px solid var(--color-border);
   background: var(--navbar-background);
 }
-
-.bottomActions {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
-}
-
-.bottomActions {
-  margin-top: auto;
-}
-
-.sidebarButton {
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-}
