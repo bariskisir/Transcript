@@ -10,7 +10,11 @@ import { registerIpc } from './ipc'
 import AppUpdater from './services/AppUpdater'
 import CredentialService from './services/CredentialService'
 import DeepgramAccountService from './services/DeepgramAccountService'
+import DeepgramCatalogService from './services/DeepgramCatalogService'
 import DeepgramService from './services/DeepgramService'
+import OpenRouterAccountService from './services/OpenRouterAccountService'
+import OpenRouterCatalogService from './services/OpenRouterCatalogService'
+import OpenRouterService from './services/OpenRouterService'
 import BingTranslateService from './services/BingTranslateService'
 import GoogleTranslateService from './services/GoogleTranslateService'
 import LoggerService from './services/LoggerService'
@@ -33,9 +37,18 @@ const openApplicationWindow = async (): Promise<void> => {
   const settings = await storage.loadSettings()
   const logger = new LoggerService(applicationPaths.logsRoot, settings.logLevel)
   loggerService = logger
-  const credentials = new CredentialService(join(applicationPaths.dataRoot, 'credentials.bin'))
+  const credentials = {
+    deepgram: new CredentialService(join(applicationPaths.dataRoot, 'credentials.bin')),
+    openrouter: new CredentialService(
+      join(applicationPaths.dataRoot, 'credentials-openrouter.bin'),
+    ),
+  }
   const deepgramAccount = new DeepgramAccountService()
+  const deepgramCatalog = new DeepgramCatalogService(logger)
+  const openRouterAccount = new OpenRouterAccountService()
+  const openRouterCatalog = new OpenRouterCatalogService(logger)
   const deepgram = new DeepgramService(logger)
+  const openRouter = new OpenRouterService(logger)
   const translator = new TranslationProviderService(
     new GoogleTranslateService(),
     new BingTranslateService(),
@@ -47,6 +60,7 @@ const openApplicationWindow = async (): Promise<void> => {
     storage,
     credentials,
     deepgram,
+    openRouter,
     translator,
     {
       onState: (event) =>
@@ -79,6 +93,9 @@ const openApplicationWindow = async (): Promise<void> => {
     storage,
     credentials,
     deepgramAccount,
+    deepgramCatalog,
+    openRouterAccount,
+    openRouterCatalog,
     transcript: transcriptService,
     updater,
     logger,

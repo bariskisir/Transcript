@@ -132,7 +132,7 @@ const TranscriptView = ({ onExport }: TranscriptViewProps): React.JSX.Element =>
         <div
           ref={sourceScrollRef}
           className={`${styles.scrollArea} selectable`}
-          style={{ flex: splitRatio }}
+          style={{ flex: translationEnabled ? splitRatio : 1 }}
         >
           {!hasContent ? (
             <div className={styles.emptyState}>

@@ -1,5 +1,5 @@
 /**
- * Persists the Deepgram API key with Electron's operating-system-backed encryption.
+ * Persists one provider API key with Electron's operating-system-backed encryption.
  */
 
 import { readFile, unlink, writeFile } from 'node:fs/promises'

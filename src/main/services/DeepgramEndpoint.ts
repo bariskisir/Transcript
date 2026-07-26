@@ -2,12 +2,12 @@
  * Builds validated Deepgram Nova streaming endpoints from persisted transcription preferences.
  */
 
-import { getDeepgramModel } from '@shared/deepgram'
+import { getDeepgramVocabularyParameter } from '@shared/deepgram'
 import type { DeepgramTranscriptionSettings } from '@shared/transcription'
 
 /** Builds a linear16 mono streaming URL with only compatible optional parameters. */
 export const buildDeepgramEndpoint = (settings: DeepgramTranscriptionSettings): string => {
-  const model = getDeepgramModel(settings.model)
+  const vocabularyParameter = getDeepgramVocabularyParameter(settings.model)
   const query = new URLSearchParams({
     model: settings.model,
     version: settings.modelVersion,
@@ -30,9 +30,11 @@ export const buildDeepgramEndpoint = (settings: DeepgramTranscriptionSettings): 
   }
   if (settings.diarization !== 'off') query.set('diarize_model', settings.diarization)
   if (settings.redaction !== 'none') query.set('redact', settings.redaction)
-  settings.vocabulary.forEach((term) => {
-    query.append(model.vocabularyParameter, term)
-  })
+  if (vocabularyParameter) {
+    settings.vocabulary.forEach((term) => {
+      query.append(vocabularyParameter, term)
+    })
+  }
 
   return `wss://api.deepgram.com/v1/listen?${query.toString()}`
 }

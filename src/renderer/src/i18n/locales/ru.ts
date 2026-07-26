@@ -90,6 +90,31 @@ export default {
     apiBalanceDescription: 'Доступный кредит по данным Deepgram.',
     model: 'Модель распознавания речи',
     modelDescription: 'Выберите модель Deepgram для этой транскрипции.',
+    openRouterApiKey: 'API-ключ OpenRouter',
+    openRouterApiKeyCreditNotice:
+      'OpenRouter — платный сервис. Пополните баланс и создайте API-ключ.',
+    openRouterApiBalance: 'Баланс OpenRouter',
+    openRouterApiBalanceDescription: 'Оставшийся кредит по данным OpenRouter.',
+    openRouterModelDescription:
+      'Модели с оплатой по длительности, отсортированные по цене за час в USD.',
+    openRouterLanguageDescription:
+      'Необязательный язык ISO 639-1; очистите поле для автоопределения.',
+    automaticLanguage: 'Автоматическое определение',
+    hour: 'час',
+    priceUnavailable: 'Цена недоступна',
+    transcriptionMethod: 'Метод транскрипции',
+    websocketMethodDescription:
+      'WebSocket поддерживает постоянное соединение и лучше подходит для транскрипции в реальном времени.',
+    restMethodDescription:
+      'REST периодически обрабатывает фрагменты аудио; WebSocket лучше подходит для транскрипции в реальном времени.',
+    transcriptSpeed: 'Скорость транскрипции',
+    transcriptSpeedDescription:
+      'При высокой скорости промежуточный текст появляется раньше, но его точность может снизиться.',
+    transcriptionSpeeds: {
+      low: 'Низкая',
+      medium: 'Средняя',
+      high: 'Высокая',
+    },
     logging: 'Логирование',
     logLevel: 'Уровень логирования',
     logLevelDescription: 'Управление детализацией журналов приложения.',
@@ -108,6 +133,7 @@ export default {
     transcriptionProviderDescription: 'Выберите сервис для живой транскрипции.',
     transcriptionProviders: {
       deepgram: 'Deepgram',
+      openrouter: 'OpenRouter',
     },
     connection: 'Подключение',
     recognition: 'Распознавание',
@@ -199,6 +225,7 @@ export default {
     apiKeyRemoved: 'API-ключ удалён',
     microphoneRequired: 'Включите хотя бы один источник аудио.',
     apiKeyRequired: 'Добавьте API-ключ Deepgram перед записью.',
+    transcriptionApiKeyRequired: 'Добавьте API-ключ {{provider}} перед записью.',
   },
   errors: {
     generic: 'Что-то пошло не так.',

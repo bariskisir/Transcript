@@ -90,6 +90,30 @@ export default {
     apiBalanceDescription: 'Von Deepgram gemeldetes verfügbares Guthaben.',
     model: 'Sprachmodell',
     modelDescription: 'Wählen Sie ein Deepgram-Livemodell für diese Transkription.',
+    openRouterApiKey: 'OpenRouter-API-Schlüssel',
+    openRouterApiKeyCreditNotice:
+      'OpenRouter ist kostenpflichtig. Laden Sie Guthaben auf und erstellen Sie einen API-Schlüssel.',
+    openRouterApiBalance: 'OpenRouter-Guthaben',
+    openRouterApiBalanceDescription: 'Von OpenRouter gemeldetes Restguthaben.',
+    openRouterModelDescription: 'Zeitbasierte Sprachmodelle, sortiert nach USD-Kosten pro Stunde.',
+    openRouterLanguageDescription:
+      'Optionale ISO-639-1-Sprache; für automatische Erkennung leeren.',
+    automaticLanguage: 'Automatische Erkennung',
+    hour: 'Stunde',
+    priceUnavailable: 'Preis nicht verfügbar',
+    transcriptionMethod: 'Transkriptionsmethode',
+    websocketMethodDescription:
+      'WebSocket hält eine kontinuierliche Verbindung und eignet sich besser für Echtzeittranskription.',
+    restMethodDescription:
+      'REST verarbeitet regelmäßige Audioausschnitte; WebSocket eignet sich besser für Echtzeittranskription.',
+    transcriptSpeed: 'Transkriptionsgeschwindigkeit',
+    transcriptSpeedDescription:
+      'Höhere Geschwindigkeiten zeigen Zwischentext früher an, können aber dessen Genauigkeit verringern.',
+    transcriptionSpeeds: {
+      low: 'Niedrig',
+      medium: 'Mittel',
+      high: 'Hoch',
+    },
     logging: 'Protokollierung',
     logLevel: 'Protokollstufe',
     logLevelDescription: 'Legt fest, wie viele Diagnosedetails lokal gespeichert werden.',
@@ -108,6 +132,7 @@ export default {
     transcriptionProviderDescription: 'Wählen Sie den Dienst für die Live-Transkription.',
     transcriptionProviders: {
       deepgram: 'Deepgram',
+      openrouter: 'OpenRouter',
     },
     connection: 'Verbindung',
     recognition: 'Erkennung',
@@ -201,6 +226,8 @@ export default {
     apiKeyRemoved: 'API-Schlüssel entfernt',
     microphoneRequired: 'Aktivieren Sie mindestens eine Audioquelle.',
     apiKeyRequired: 'Fügen Sie vor der Aufnahme einen Deepgram-API-Schlüssel hinzu.',
+    transcriptionApiKeyRequired:
+      'Fügen Sie vor der Aufnahme einen {{provider}}-API-Schlüssel hinzu.',
   },
   errors: {
     generic: 'Etwas ist schiefgelaufen.',

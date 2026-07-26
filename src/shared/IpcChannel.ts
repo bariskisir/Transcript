@@ -9,6 +9,8 @@ export enum IpcChannel {
   CredentialsGet = 'credentials:get',
   CredentialsDelete = 'credentials:delete',
   CredentialsBalance = 'credentials:balance',
+  DeepgramModels = 'deepgram:models',
+  OpenRouterModels = 'openrouter:models',
   SessionStart = 'session:start',
   SessionStop = 'session:stop',
   AudioChunk = 'audio:chunk',

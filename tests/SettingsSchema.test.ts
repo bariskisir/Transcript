@@ -63,23 +63,59 @@ describe('parsePersistedSettings', () => {
     expect(result.settingsRevision).toBe(1)
   })
 
-  it('enforces transcriptionProvider to deepgram', () => {
+  it('falls back to Deepgram for an unknown transcription provider', () => {
     const result = parsePersistedSettings({ transcriptionProvider: 'other' })
     expect(result.transcriptionProvider).toBe('deepgram')
   })
 
-  it('preserves a valid Deepgram language from input', () => {
+  it('preserves OpenRouter as a valid transcription provider', () => {
+    const result = parsePersistedSettings({ transcriptionProvider: 'openrouter' })
+    expect(result.transcriptionProvider).toBe('openrouter')
+  })
+
+  it('preserves valid OpenRouter request settings', () => {
+    const result = parsePersistedSettings({
+      transcriptionProvider: 'openrouter',
+      transcriptionProviderSettings: {
+        openrouter: {
+          model: 'mistralai/voxtral-mini-transcribe',
+          language: 'tr',
+          speed: 'high',
+        },
+      },
+    })
+    expect(result.transcriptionProviderSettings.openrouter).toEqual({
+      model: 'mistralai/voxtral-mini-transcribe',
+      language: 'tr',
+      speed: 'high',
+    })
+  })
+
+  it('adds the low REST transcript speed to older OpenRouter settings', () => {
+    const result = parsePersistedSettings({
+      transcriptionProviderSettings: {
+        openrouter: {
+          model: 'openai/whisper-large-v3-turbo',
+          language: '',
+        },
+      },
+    })
+    expect(result.transcriptionProviderSettings.openrouter.speed).toBe('low')
+  })
+
+  it('migrates the legacy nova-3 alias while preserving its language', () => {
     const result = parsePersistedSettings({
       transcriptionProviderSettings: { deepgram: { language: 'tr', model: 'nova-3' } },
     })
+    expect(result.transcriptionProviderSettings.deepgram.model).toBe('nova-3-general')
     expect(result.transcriptionProviderSettings.deepgram.language).toBe('tr')
   })
 
-  it('falls back to en for an unsupported language', () => {
+  it('preserves a Deepgram language until the live catalog reconciles it', () => {
     const result = parsePersistedSettings({
       transcriptionProviderSettings: { deepgram: { language: 'xx', model: 'nova-2-meeting' } },
     })
-    expect(result.transcriptionProviderSettings.deepgram.language).toBe('en')
+    expect(result.transcriptionProviderSettings.deepgram.language).toBe('xx')
   })
 
   it('disables redaction for non-English languages', () => {
@@ -160,24 +196,25 @@ describe('settingsSchema', () => {
     expect(settingsSchema.safeParse(custom).success).toBe(true)
   })
 
-  it('rejects an unsupported Deepgram model', () => {
-    const invalid = {
+  it('accepts a dynamically discovered Deepgram model identifier', () => {
+    const dynamic = {
       ...validSettings,
       transcriptionProviderSettings: {
+        ...validSettings.transcriptionProviderSettings,
         deepgram: {
           ...DEFAULT_DEEPGRAM_TRANSCRIPTION_SETTINGS,
           model: 'nova-999',
         },
       },
     }
-    const result = settingsSchema.safeParse(invalid)
-    expect(result.success).toBe(false)
+    expect(settingsSchema.safeParse(dynamic).success).toBe(true)
   })
 
-  it('rejects a language not supported by a specialized model', () => {
-    const invalid = {
+  it('defers model-specific language validation to the live catalog', () => {
+    const dynamic = {
       ...validSettings,
       transcriptionProviderSettings: {
+        ...validSettings.transcriptionProviderSettings,
         deepgram: {
           ...DEFAULT_DEEPGRAM_TRANSCRIPTION_SETTINGS,
           model: 'nova-2-meeting',
@@ -185,14 +222,14 @@ describe('settingsSchema', () => {
         },
       },
     }
-    const result = settingsSchema.safeParse(invalid)
-    expect(result.success).toBe(false)
+    expect(settingsSchema.safeParse(dynamic).success).toBe(true)
   })
 
   it('rejects redaction for non-English languages via superRefine', () => {
     const invalid = {
       ...validSettings,
       transcriptionProviderSettings: {
+        ...validSettings.transcriptionProviderSettings,
         deepgram: {
           ...DEFAULT_DEEPGRAM_TRANSCRIPTION_SETTINGS,
           model: 'nova-3',
@@ -257,6 +294,7 @@ describe('settingsSchema', () => {
     const withRedaction: AppSettings = {
       ...validSettings,
       transcriptionProviderSettings: {
+        ...validSettings.transcriptionProviderSettings,
         deepgram: {
           ...DEFAULT_DEEPGRAM_TRANSCRIPTION_SETTINGS,
           model: 'nova-3',
@@ -315,6 +353,20 @@ describe('settingsPatchSchema', () => {
   it('rejects an empty Deepgram settings patch', () => {
     const result = settingsPatchSchema.safeParse({
       transcriptionProviderSettings: { deepgram: {} },
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('accepts an OpenRouter transcript speed patch', () => {
+    const result = settingsPatchSchema.safeParse({
+      transcriptionProviderSettings: { openrouter: { speed: 'medium' } },
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('rejects an unsupported OpenRouter transcript speed', () => {
+    const result = settingsPatchSchema.safeParse({
+      transcriptionProviderSettings: { openrouter: { speed: 'instant' } },
     })
     expect(result.success).toBe(false)
   })

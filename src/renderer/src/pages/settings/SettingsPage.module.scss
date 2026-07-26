@@ -147,6 +147,41 @@
   width: 250px;
 }
 
+.modelSelect {
+  :global(.ant-select-selector) {
+    min-height: 48px !important;
+    align-items: center;
+  }
+
+  :global(.ant-select-selection-item) {
+    line-height: normal !important;
+  }
+}
+
+.modelOption {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-block: 3px;
+  line-height: 1.25;
+}
+
+.modelOptionName {
+  overflow: hidden;
+  color: var(--color-text-1);
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modelOptionPrice {
+  color: var(--color-text-3);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
 .fullControl,
 .flexControl {
   width: 100%;

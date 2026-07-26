@@ -149,18 +149,24 @@ export default class StorageService {
     return this.withFileLock(this.settingsPath, async () => {
       const current = await this.readSettingsUnlocked()
       const deepgramPatch = patch.transcriptionProviderSettings?.deepgram
+      const openRouterPatch = patch.transcriptionProviderSettings?.openrouter
       const validated = settingsSchema.parse({
         ...current,
         ...patch,
-        transcriptionProviderSettings: deepgramPatch
-          ? {
-              ...current.transcriptionProviderSettings,
-              deepgram: {
-                ...current.transcriptionProviderSettings.deepgram,
-                ...deepgramPatch,
-              },
-            }
-          : current.transcriptionProviderSettings,
+        transcriptionProviderSettings:
+          deepgramPatch || openRouterPatch
+            ? {
+                ...current.transcriptionProviderSettings,
+                deepgram: {
+                  ...current.transcriptionProviderSettings.deepgram,
+                  ...deepgramPatch,
+                },
+                openrouter: {
+                  ...current.transcriptionProviderSettings.openrouter,
+                  ...openRouterPatch,
+                },
+              }
+            : current.transcriptionProviderSettings,
       })
       await this.writeJsonFileUnlocked(this.settingsPath, validated)
       return validated

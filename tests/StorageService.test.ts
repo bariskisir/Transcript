@@ -330,5 +330,21 @@ describe('StorageService', () => {
       const reloaded = await service.loadSettings()
       expect(reloaded.theme).toBe('dark')
     })
+
+    it('merges OpenRouter settings without replacing Deepgram settings', async () => {
+      const before = await service.loadSettings()
+      const saved = await service.updateSettings({
+        transcriptionProviderSettings: {
+          openrouter: { model: 'mistralai/voxtral-mini-transcribe' },
+        },
+      })
+
+      expect(saved.transcriptionProviderSettings.openrouter).toMatchObject({
+        model: 'mistralai/voxtral-mini-transcribe',
+      })
+      expect(saved.transcriptionProviderSettings.deepgram).toEqual(
+        before.transcriptionProviderSettings.deepgram,
+      )
+    })
   })
 })

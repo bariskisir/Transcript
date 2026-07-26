@@ -1,11 +1,12 @@
 /**
- * Exposes renderer commands for persisted settings and Deepgram credentials.
+ * Exposes renderer commands for persisted settings and transcription credentials.
  */
 
 import { useCallback } from 'react'
 import { App as AntdApp } from 'antd'
 import { useTranslation } from 'react-i18next'
 import type { AppSettingsPatch } from '@shared/types'
+import type { TranscriptionProvider } from '@shared/transcription'
 import i18n from '@renderer/i18n'
 import { createLogger } from '@renderer/services/LoggerService'
 import SettingsPersistenceQueue from '@renderer/services/SettingsPersistenceQueue'
@@ -56,17 +57,17 @@ export const useSettingsActions = () => {
     [currentSessionId, dispatch, message, t],
   )
 
-  /** Verifies and saves a Deepgram API key. */
+  /** Verifies and saves one transcription provider API key. */
   const saveApiKey = useCallback(
-    async (apiKey: string): Promise<boolean> => {
+    async (provider: TranscriptionProvider, apiKey: string): Promise<boolean> => {
       try {
-        const balance = await window.app.saveApiKey(apiKey)
-        dispatch(setHasApiKey(true))
-        dispatch(setApiBalance(balance))
+        const balance = await window.app.saveApiKey(provider, apiKey)
+        dispatch(setHasApiKey({ provider, available: true }))
+        dispatch(setApiBalance({ provider, balance }))
         void message.success(t('notices.apiKeySaved'))
         return true
       } catch (error) {
-        logger.error('Deepgram API key validation failed.', error)
+        logger.error('Transcription API key validation failed.', error)
         void message.error(t('errors.generic'))
         return false
       }
@@ -74,30 +75,36 @@ export const useSettingsActions = () => {
     [dispatch, message, t],
   )
 
-  /** Removes the encrypted Deepgram key and clears credential state. */
-  const deleteApiKey = useCallback(async (): Promise<boolean> => {
-    try {
-      await window.app.deleteApiKey()
-      dispatch(setHasApiKey(false))
-      dispatch(setApiBalance([]))
-      void message.success(t('notices.apiKeyRemoved'))
-      return true
-    } catch (error) {
-      logger.error('Deepgram API key could not be removed.', error)
-      void message.error(t('errors.generic'))
-      return false
-    }
-  }, [dispatch, message, t])
+  /** Removes one encrypted provider key and clears its credential state. */
+  const deleteApiKey = useCallback(
+    async (provider: TranscriptionProvider): Promise<boolean> => {
+      try {
+        await window.app.deleteApiKey(provider)
+        dispatch(setHasApiKey({ provider, available: false }))
+        dispatch(setApiBalance({ provider, balance: [] }))
+        void message.success(t('notices.apiKeyRemoved'))
+        return true
+      } catch (error) {
+        logger.error('Transcription API key could not be removed.', error)
+        void message.error(t('errors.generic'))
+        return false
+      }
+    },
+    [dispatch, message, t],
+  )
 
   /** Refreshes optional account balance data without surfacing unsupported accounts. */
-  const refreshApiBalance = useCallback(async (): Promise<void> => {
-    try {
-      dispatch(setApiBalance(await window.app.getApiBalance()))
-    } catch (error) {
-      logger.warn('Deepgram balance could not be refreshed.', error)
-      dispatch(setApiBalance([]))
-    }
-  }, [dispatch])
+  const refreshApiBalance = useCallback(
+    async (provider: TranscriptionProvider): Promise<void> => {
+      try {
+        dispatch(setApiBalance({ provider, balance: await window.app.getApiBalance(provider) }))
+      } catch (error) {
+        logger.warn('Transcription provider balance could not be refreshed.', error)
+        dispatch(setApiBalance({ provider, balance: [] }))
+      }
+    },
+    [dispatch],
+  )
 
   return { deleteApiKey, refreshApiBalance, saveApiKey, saveSettings }
 }

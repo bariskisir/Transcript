@@ -7,7 +7,7 @@ import {
   DEFAULT_SETTINGS,
   type AppSettings,
   type BootstrapPayload,
-  type DeepgramBalance,
+  type ApiBalance,
   type SessionDocument,
   type SessionStateEvent,
   type SessionSummary,
@@ -15,6 +15,9 @@ import {
   type TranslationResultEvent,
   type UpdateStateEvent,
 } from '@shared/types'
+import type { OpenRouterSpeechModel } from '@shared/openrouter'
+import type { DeepgramSpeechModel } from '@shared/deepgram'
+import type { TranscriptionProvider } from '@shared/transcription'
 
 export type AppPage = 'home' | 'settings'
 export type SettingsSection =
@@ -27,8 +30,10 @@ export interface AppState {
   settings: AppSettings
   platform: BootstrapPayload['platform']
   version: string
-  hasApiKey: boolean
-  apiBalance: DeepgramBalance[]
+  hasApiKeys: Record<TranscriptionProvider, boolean>
+  apiBalances: Record<TranscriptionProvider, ApiBalance[]>
+  deepgramModels: DeepgramSpeechModel[]
+  openRouterModels: OpenRouterSpeechModel[]
   sessions: SessionSummary[]
   currentSession: SessionDocument | null
   session: SessionStateEvent
@@ -46,8 +51,10 @@ const initialState: AppState = {
   settings: DEFAULT_SETTINGS,
   platform: 'win32',
   version: '0.0.0',
-  hasApiKey: false,
-  apiBalance: [],
+  hasApiKeys: { deepgram: false, openrouter: false },
+  apiBalances: { deepgram: [], openrouter: [] },
+  deepgramModels: [],
+  openRouterModels: [],
   sessions: [],
   currentSession: null,
   session: { state: 'idle' },
@@ -69,7 +76,9 @@ const appSlice = createSlice({
       state.settings = action.payload.settings
       state.platform = action.payload.platform
       state.version = action.payload.version
-      state.hasApiKey = action.payload.hasApiKey
+      state.hasApiKeys = action.payload.hasApiKeys
+      state.deepgramModels = action.payload.deepgramModels
+      state.openRouterModels = action.payload.openRouterModels
       state.sessions = action.payload.sessions
       state.currentSession = action.payload.currentSession
     },
@@ -86,13 +95,19 @@ const appSlice = createSlice({
     setSettings(state, action: PayloadAction<AppSettings>) {
       state.settings = action.payload
     },
-    /** Updates whether a Deepgram credential is available. */
-    setHasApiKey(state, action: PayloadAction<boolean>) {
-      state.hasApiKey = action.payload
+    /** Updates whether one transcription provider credential is available. */
+    setHasApiKey(
+      state,
+      action: PayloadAction<{ provider: TranscriptionProvider; available: boolean }>,
+    ) {
+      state.hasApiKeys[action.payload.provider] = action.payload.available
     },
-    /** Replaces optional Deepgram project balance data. */
-    setApiBalance(state, action: PayloadAction<DeepgramBalance[]>) {
-      state.apiBalance = action.payload
+    /** Replaces optional account balance data for one transcription provider. */
+    setApiBalance(
+      state,
+      action: PayloadAction<{ provider: TranscriptionProvider; balance: ApiBalance[] }>,
+    ) {
+      state.apiBalances[action.payload.provider] = action.payload.balance
     },
     /** Replaces session summaries from local storage. */
     setSessions(state, action: PayloadAction<SessionSummary[]>) {

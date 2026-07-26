@@ -3,13 +3,14 @@
  */
 
 import {
+  canonicalizeDeepgramModel,
   DEEPGRAM_DIARIZATION_MODES,
-  DEEPGRAM_MODEL_IDS,
   DEEPGRAM_REDACTION_MODES,
-  isDeepgramLanguageSupported,
 } from '@shared/deepgram'
 import {
   DEFAULT_DEEPGRAM_TRANSCRIPTION_SETTINGS,
+  DEFAULT_OPENROUTER_TRANSCRIPTION_SETTINGS,
+  REST_TRANSCRIPTION_SPEEDS,
   TRANSCRIPTION_PROVIDERS,
 } from '@shared/transcription'
 import { TRANSLATION_PROVIDERS, TRANSLATION_TARGET_LANGUAGES } from '@shared/translation'
@@ -25,7 +26,7 @@ import { z } from 'zod'
 
 const deepgramSettingsFieldsSchema = z.object({
   language: z.string().min(1).max(24),
-  model: z.enum(DEEPGRAM_MODEL_IDS),
+  model: z.string().trim().min(1).max(200),
   modelVersion: z.string().trim().min(1).max(80),
   punctuate: z.boolean(),
   smartFormat: z.boolean(),
@@ -40,9 +41,16 @@ const deepgramSettingsFieldsSchema = z.object({
   mipOptOut: z.boolean(),
 })
 
+const openRouterSettingsFieldsSchema = z.object({
+  model: z.string().trim().min(1).max(200),
+  language: z.string().regex(/^(?:|[a-z]{2})$/),
+  speed: z.enum(REST_TRANSCRIPTION_SPEEDS),
+})
+
 const transcriptionProviderSettingsSchema = z
   .object({
     deepgram: deepgramSettingsFieldsSchema,
+    openrouter: openRouterSettingsFieldsSchema,
   })
   .strict()
 
@@ -67,13 +75,6 @@ const settingsFieldsSchema = z.object({
 
 export const settingsSchema = settingsFieldsSchema.superRefine((settings, context) => {
   const deepgram = settings.transcriptionProviderSettings.deepgram
-  if (!isDeepgramLanguageSupported(deepgram.model, deepgram.language)) {
-    context.addIssue({
-      code: 'custom',
-      path: ['transcriptionProviderSettings', 'deepgram', 'language'],
-      message: 'The selected language is not supported by this Deepgram model.',
-    })
-  }
   if (deepgram.redaction !== 'none' && !deepgram.language.startsWith('en')) {
     context.addIssue({
       code: 'custom',
@@ -91,9 +92,18 @@ const deepgramSettingsPatchSchema = deepgramSettingsFieldsSchema
     'At least one Deepgram setting must be provided.',
   )
 
+const openRouterSettingsPatchSchema = openRouterSettingsFieldsSchema
+  .partial()
+  .strict()
+  .refine(
+    (patch) => Object.keys(patch).length > 0,
+    'At least one OpenRouter setting must be provided.',
+  )
+
 const transcriptionProviderSettingsPatchSchema = z
   .object({
     deepgram: deepgramSettingsPatchSchema.optional(),
+    openrouter: openRouterSettingsPatchSchema.optional(),
   })
   .strict()
   .refine(
@@ -123,6 +133,7 @@ export const parsePersistedSettings = (input: unknown): AppSettings => {
 
   const persistedProviderSettings = asRecord(legacy.transcriptionProviderSettings)
   const persistedDeepgram = asRecord(persistedProviderSettings?.deepgram)
+  const persistedOpenRouter = asRecord(persistedProviderSettings?.openrouter)
   const deepgramSource = persistedDeepgram ?? legacy
   const deepgramCandidate = {
     ...DEFAULT_DEEPGRAM_TRANSCRIPTION_SETTINGS,
@@ -138,18 +149,15 @@ export const parsePersistedSettings = (input: unknown): AppSettings => {
         ? deepgramSource.endpointingMs
         : DEFAULT_DEEPGRAM_TRANSCRIPTION_SETTINGS.endpointingMs,
   }
-  const model =
-    DEEPGRAM_MODEL_IDS.find((supportedModel) => supportedModel === deepgramCandidate.model) ??
-    DEFAULT_DEEPGRAM_TRANSCRIPTION_SETTINGS.model
-  const fallbackLanguage = isDeepgramLanguageSupported(
-    model,
-    DEFAULT_DEEPGRAM_TRANSCRIPTION_SETTINGS.language,
-  )
-    ? DEFAULT_DEEPGRAM_TRANSCRIPTION_SETTINGS.language
-    : 'en'
-  const language = isDeepgramLanguageSupported(model, String(deepgramCandidate.language))
-    ? String(deepgramCandidate.language)
-    : fallbackLanguage
+  const model = canonicalizeDeepgramModel(String(deepgramCandidate.model))
+  const language = String(deepgramCandidate.language)
+  const openRouterCandidate = {
+    ...DEFAULT_OPENROUTER_TRANSCRIPTION_SETTINGS,
+    ...persistedOpenRouter,
+  }
+  const transcriptionProvider =
+    TRANSCRIPTION_PROVIDERS.find((provider) => provider === legacy.transcriptionProvider) ??
+    DEFAULT_SETTINGS.transcriptionProvider
   const translationTargetLanguage = TRANSLATION_TARGET_LANGUAGES.find(
     (targetLanguage) => targetLanguage === legacy.translationTargetLanguage,
   )
@@ -157,7 +165,7 @@ export const parsePersistedSettings = (input: unknown): AppSettings => {
     ...DEFAULT_SETTINGS,
     ...legacy,
     settingsRevision: 1 as const,
-    transcriptionProvider: 'deepgram' as const,
+    transcriptionProvider,
     transcriptionProviderSettings: {
       deepgram: {
         ...deepgramCandidate,
@@ -165,6 +173,7 @@ export const parsePersistedSettings = (input: unknown): AppSettings => {
         language,
         ...(language.startsWith('en') ? {} : { redaction: 'none' as const }),
       },
+      openrouter: openRouterCandidate,
     },
     translationEnabled:
       typeof legacy.translationEnabled === 'boolean'
@@ -184,7 +193,6 @@ export const parsePersistedSettings = (input: unknown): AppSettings => {
   const parsed = settingsSchema.safeParse(candidate)
   if (parsed.success) return parsed.data
 
-  const safeModel = DEFAULT_DEEPGRAM_TRANSCRIPTION_SETTINGS.model
   return settingsSchema.parse({
     ...DEFAULT_SETTINGS,
     uiLanguage: APP_LOCALES.includes(candidate.uiLanguage)
@@ -194,11 +202,10 @@ export const parsePersistedSettings = (input: unknown): AppSettings => {
     transcriptionProviderSettings: {
       deepgram: {
         ...DEFAULT_DEEPGRAM_TRANSCRIPTION_SETTINGS,
-        model: safeModel,
-        language: isDeepgramLanguageSupported(safeModel, String(deepgramCandidate.language))
-          ? deepgramCandidate.language
-          : DEFAULT_DEEPGRAM_TRANSCRIPTION_SETTINGS.language,
+        model: DEFAULT_DEEPGRAM_TRANSCRIPTION_SETTINGS.model,
+        language: DEFAULT_DEEPGRAM_TRANSCRIPTION_SETTINGS.language,
       },
+      openrouter: DEFAULT_OPENROUTER_TRANSCRIPTION_SETTINGS,
     },
   })
 }

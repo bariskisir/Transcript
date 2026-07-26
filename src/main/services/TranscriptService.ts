@@ -15,10 +15,12 @@ import type {
   TranslationResultEvent,
   TranslationSegment,
 } from '@shared/types'
+import type { TranscriptionProvider } from '@shared/transcription'
 import type { TranslationProvider, TranslationTargetLanguage } from '@shared/translation'
 import type CredentialService from './CredentialService'
 import type DeepgramService from './DeepgramService'
 import type LoggerService from './LoggerService'
+import type OpenRouterService from './OpenRouterService'
 import type StorageService from './StorageService'
 import type TranslationProviderService from './TranslationProviderService'
 import {
@@ -56,6 +58,7 @@ export default class TranscriptService {
   private persistenceTimer: NodeJS.Timeout | null = null
   private sessionSegments: TranscriptSegment[] = []
   private sessionLanguage = ''
+  private transcriptionProvider: TranscriptionProvider | null = null
   private translationProvider: TranslationProvider = 'google'
   private translationEnabled = false
   private translationTarget: TranslationTargetLanguage = 'tr'
@@ -66,8 +69,9 @@ export default class TranscriptService {
   /** Creates a session coordinator with explicit service dependencies. */
   public constructor(
     private readonly storage: StorageService,
-    private readonly credentials: CredentialService,
+    private readonly credentials: Record<TranscriptionProvider, CredentialService>,
     private readonly deepgram: DeepgramService,
+    private readonly openRouter: OpenRouterService,
     private readonly translator: TranslationProviderService,
     private readonly events: TranscriptEvents,
     private readonly logger: LoggerService,
@@ -93,31 +97,51 @@ export default class TranscriptService {
   private async startInternal(request: StartSessionRequest): Promise<StartSessionResult> {
     try {
       const sources = this.resolveSources(request)
-      const providerSettings = request.settings.transcriptionProviderSettings.deepgram
-      const apiKey = await this.credentials.getApiKey()
+      const provider = request.settings.transcriptionProvider
+      const providerSettings = request.settings.transcriptionProviderSettings[provider]
+      const language =
+        provider === 'deepgram'
+          ? providerSettings.language
+          : providerSettings.language || request.settings.uiLanguage
+      const apiKey = await this.credentials[provider].getApiKey()
       this.throwIfStartCancelled()
-      if (!apiKey) throw new Error('Save a valid Deepgram API key before recording.')
+      if (!apiKey)
+        throw new Error(
+          `Save a valid ${provider === 'deepgram' ? 'Deepgram' : 'OpenRouter'} API key before recording.`,
+        )
       const session = request.transcriptId
         ? await this.storage.getSession(request.transcriptId)
-        : await this.storage.createSession(providerSettings.language, request.title)
+        : await this.storage.createSession(language, request.title)
       this.startingSessionId = session.id
       this.throwIfStartCancelled()
       this.events.onState({ state: 'connecting', transcriptId: session.id })
-      await this.deepgram.start({
-        sources,
-        apiKey,
-        settings: providerSettings,
-        onResult: (event) => this.handleResult(event),
-        onError: (source, message) => {
-          this.logger.error('TranscriptService', 'A Deepgram source reported an error.', {
-            source,
-            message,
-          })
-          this.events.onError({ source, message, recoverable: true })
-        },
-      })
+      const onError = (source: AudioSource, message: string): void => {
+        this.logger.error('TranscriptService', 'A transcription source reported an error.', {
+          source,
+          message,
+        })
+        this.events.onError({ source, message, recoverable: true })
+      }
+      if (provider === 'deepgram') {
+        await this.deepgram.start({
+          sources,
+          apiKey,
+          settings: request.settings.transcriptionProviderSettings.deepgram,
+          onResult: (event) => this.handleResult(event),
+          onError,
+        })
+      } else {
+        await this.openRouter.start({
+          sources,
+          apiKey,
+          settings: request.settings.transcriptionProviderSettings.openrouter,
+          onResult: (event) => this.handleResult(event),
+          onError,
+        })
+      }
       this.throwIfStartCancelled()
       this.currentSessionId = session.id
+      this.transcriptionProvider = provider
       this.startingSessionId = null
       this.baseDurationMs = session.durationMs
       this.startedAt = Date.now()
@@ -125,7 +149,7 @@ export default class TranscriptService {
       this.pendingSegments = []
       this.clearPersistenceTimer()
       this.sessionSegments = [...session.segments]
-      this.sessionLanguage = providerSettings.language
+      this.sessionLanguage = language
       this.translationProvider = request.settings.translationProvider
       this.translationEnabled = request.settings.translationEnabled
       this.translationTarget = request.settings.translationTargetLanguage
@@ -138,7 +162,7 @@ export default class TranscriptService {
       this.logger.info('TranscriptService', 'Recording session started.', {
         sessionId: session.id,
         sources,
-        transcriptionProvider: request.settings.transcriptionProvider,
+        transcriptionProvider: provider,
         model: providerSettings.model,
         language: providerSettings.language,
         translationProvider: request.settings.translationProvider,
@@ -148,7 +172,7 @@ export default class TranscriptService {
       this.schedulePendingTranslations(session.id, true)
       return { session, activeSources: sources }
     } catch (error) {
-      await this.deepgram.stop()
+      await Promise.allSettled([this.deepgram.stop(), this.openRouter.stop()])
       const cancelled = error instanceof SessionStartCancelledError || this.startCancelled
       this.resetSessionState()
       this.events.onState({ state: 'idle' })
@@ -161,9 +185,11 @@ export default class TranscriptService {
     }
   }
 
-  /** Sends a source-specific PCM frame to Deepgram. */
+  /** Sends a source-specific PCM frame to the active transcription provider. */
   public sendAudio(source: AudioSource, samples: Uint8Array): void {
-    if (this.currentSessionId) this.deepgram.send(source, samples)
+    if (!this.currentSessionId) return
+    if (this.transcriptionProvider === 'deepgram') this.deepgram.send(source, samples)
+    if (this.transcriptionProvider === 'openrouter') this.openRouter.send(source, samples)
   }
 
   /** Changes the target language and translates the selected session from its beginning. */
@@ -204,7 +230,7 @@ export default class TranscriptService {
         state: 'stopping',
         ...(this.startingSessionId ? { transcriptId: this.startingSessionId } : {}),
       })
-      await this.deepgram.stop()
+      await Promise.allSettled([this.deepgram.stop(), this.openRouter.stop()])
       await this.startPromise.catch(() => undefined)
       return null
     }
@@ -220,7 +246,8 @@ export default class TranscriptService {
   /** Completes the remote flush and persistence after the capture stop time is fixed. */
   private async finishStop(sessionId: string, stoppedAt: number): Promise<SessionDocument> {
     try {
-      await this.deepgram.stop()
+      if (this.transcriptionProvider === 'openrouter') await this.openRouter.stop()
+      else await this.deepgram.stop()
       this.flushPendingSegments(sessionId)
       this.schedulePendingTranslations(sessionId, true)
       await Promise.all([this.persistenceQueue, ...this.translationQueues.values()])
@@ -253,6 +280,7 @@ export default class TranscriptService {
     this.pendingSegments = []
     this.sessionSegments = []
     this.sessionLanguage = ''
+    this.transcriptionProvider = null
     this.translationProvider = 'google'
     this.translationEnabled = false
     this.translationTarget = 'tr'

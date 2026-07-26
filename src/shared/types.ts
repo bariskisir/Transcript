@@ -4,10 +4,13 @@
 
 import {
   DEFAULT_DEEPGRAM_TRANSCRIPTION_SETTINGS,
+  DEFAULT_OPENROUTER_TRANSCRIPTION_SETTINGS,
   type TranscriptionProvider,
   type TranscriptionProviderSettings,
   type TranscriptionProviderSettingsPatch,
 } from './transcription'
+import type { OpenRouterSpeechModel } from './openrouter'
+import type { DeepgramSpeechModel } from './deepgram'
 import type { TranslationProvider, TranslationTargetLanguage } from './translation'
 
 export const AUDIO_SOURCES = ['microphone', 'speaker'] as const
@@ -59,6 +62,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   transcriptionProvider: 'deepgram',
   transcriptionProviderSettings: {
     deepgram: DEFAULT_DEEPGRAM_TRANSCRIPTION_SETTINGS,
+    openrouter: DEFAULT_OPENROUTER_TRANSCRIPTION_SETTINGS,
   },
   translationProvider: 'google',
   translationEnabled: false,
@@ -122,7 +126,9 @@ export interface BootstrapPayload {
   settings: AppSettings
   sessions: SessionSummary[]
   currentSession: SessionDocument
-  hasApiKey: boolean
+  hasApiKeys: Record<TranscriptionProvider, boolean>
+  deepgramModels: DeepgramSpeechModel[]
+  openRouterModels: OpenRouterSpeechModel[]
   platform: DesktopPlatform
   version: string
 }
@@ -143,7 +149,8 @@ export interface DeleteSessionResult {
   replacement?: SessionDocument
 }
 
-export interface DeepgramBalance {
+/** Provider-neutral account balance amount and billing unit. */
+export interface ApiBalance {
   amount: number
   units: string
 }
@@ -195,14 +202,18 @@ export interface TranscriptApi {
   bootstrap(): Promise<BootstrapPayload>
   /** Atomically merges and persists validated application settings fields. */
   saveSettings(patch: AppSettingsPatch): Promise<AppSettings>
-  /** Validates, encrypts, and persists a Deepgram key, returning supported balance data. */
-  saveApiKey(apiKey: string): Promise<DeepgramBalance[]>
-  /** Decrypts the saved Deepgram key for the explicit settings credential field. */
-  getApiKey(): Promise<string | null>
-  /** Removes the encrypted Deepgram key. */
-  deleteApiKey(): Promise<void>
-  /** Retrieves optional Deepgram balance data for the encrypted key. */
-  getApiBalance(): Promise<DeepgramBalance[]>
+  /** Validates, encrypts, and persists one provider key, returning supported balance data. */
+  saveApiKey(provider: TranscriptionProvider, apiKey: string): Promise<ApiBalance[]>
+  /** Decrypts the selected provider key only when explicitly requested by settings. */
+  getApiKey(provider: TranscriptionProvider): Promise<string | null>
+  /** Removes one provider's encrypted API key. */
+  deleteApiKey(provider: TranscriptionProvider): Promise<void>
+  /** Retrieves optional balance data for one encrypted provider key. */
+  getApiBalance(provider: TranscriptionProvider): Promise<ApiBalance[]>
+  /** Retrieves unauthenticated public Deepgram streaming STT models. */
+  getDeepgramModels(): Promise<DeepgramSpeechModel[]>
+  /** Retrieves duration-priced OpenRouter speech models ordered by hourly cost. */
+  getOpenRouterModels(): Promise<OpenRouterSpeechModel[]>
   /** Starts a new source-separated transcription session. */
   startSession(request: StartSessionRequest): Promise<StartSessionResult>
   /** Flushes and stops the active transcription session. */

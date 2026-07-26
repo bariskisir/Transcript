@@ -25,9 +25,13 @@ export const useSessionActions = () => {
   const dispatch = useAppDispatch()
   const sessions = useAppSelector((state) => state.app.sessions)
   const currentSessionId = useAppSelector((state) => state.app.currentSession?.id ?? null)
-  const speechLanguage = useAppSelector(
-    (state) => state.app.settings.transcriptionProviderSettings.deepgram.language,
-  )
+  const speechLanguage = useAppSelector((state) => {
+    const settings = state.app.settings
+    return (
+      settings.transcriptionProviderSettings[settings.transcriptionProvider].language ||
+      settings.uiLanguage
+    )
+  })
   const translationProvider = useAppSelector((state) => state.app.settings.translationProvider)
   const translationEnabled = useAppSelector((state) => state.app.settings.translationEnabled)
   const translationTargetLanguage = useAppSelector(

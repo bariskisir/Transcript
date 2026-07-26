@@ -89,6 +89,30 @@ export default {
     apiBalanceDescription: 'Deepgram tarafından bildirilen kullanılabilir kredi.',
     model: 'Konuşma modeli',
     modelDescription: 'Bu transkripsiyon için canlı bir Deepgram modeli seçin.',
+    openRouterApiKey: 'OpenRouter API anahtarı',
+    openRouterApiKeyCreditNotice:
+      'OpenRouter ücretli bir hizmettir. Kredi ekleyip bir API anahtarı oluşturun.',
+    openRouterApiBalance: 'OpenRouter bakiyesi',
+    openRouterApiBalanceDescription: 'OpenRouter tarafından bildirilen kalan kredi.',
+    openRouterModelDescription: 'Süre bazlı modeller saatlik USD ücretine göre sıralanır.',
+    openRouterLanguageDescription:
+      'İsteğe bağlı ISO 639-1 dili; otomatik algılama için temizleyin.',
+    automaticLanguage: 'Otomatik algılama',
+    hour: 'saat',
+    priceUnavailable: 'Fiyat bilgisi yok',
+    transcriptionMethod: 'Transkripsiyon yöntemi',
+    websocketMethodDescription:
+      'WebSocket kesintisiz bağlantı kurar ve gerçek zamanlı transkripsiyon için daha uygundur.',
+    restMethodDescription:
+      'REST düzenli ses kesitlerini işler; gerçek zamanlı transkripsiyon için WebSocket daha uygundur.',
+    transcriptSpeed: 'Transcript hızı',
+    transcriptSpeedDescription:
+      'Düşük hız daha büyük ses parçaları toplar; hız yükseldikçe sonuç daha erken gelir ancak doğruluk azalabilir.',
+    transcriptionSpeeds: {
+      low: 'Düşük',
+      medium: 'Orta',
+      high: 'Yüksek',
+    },
     logging: 'Günlükleme',
     logLevel: 'Günlük seviyesi',
     logLevelDescription: 'Yerel olarak kaydedilecek tanılama ayrıntısı miktarını seçin.',
@@ -107,6 +131,7 @@ export default {
     transcriptionProviderDescription: 'Canlı transkripsiyon için kullanılacak hizmeti seçin.',
     transcriptionProviders: {
       deepgram: 'Deepgram',
+      openrouter: 'OpenRouter',
     },
     connection: 'Bağlantı',
     recognition: 'Tanıma',
@@ -198,6 +223,7 @@ export default {
     apiKeyRemoved: 'API anahtarı kaldırıldı',
     microphoneRequired: 'En az bir ses kaynağını etkinleştirin.',
     apiKeyRequired: 'Kayda başlamadan önce Deepgram API anahtarı ekleyin.',
+    transcriptionApiKeyRequired: 'Kayda başlamadan önce bir {{provider}} API anahtarı ekleyin.',
   },
   errors: {
     generic: 'Bir şeyler ters gitti.',

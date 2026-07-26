@@ -90,6 +90,31 @@ export default {
     apiBalanceDescription: 'Crédit disponible indiqué par Deepgram.',
     model: 'Modèle vocal',
     modelDescription: 'Choisissez un modèle Deepgram en direct pour cette transcription.',
+    openRouterApiKey: 'Clé API OpenRouter',
+    openRouterApiKeyCreditNotice:
+      'OpenRouter est un service payant. Ajoutez du crédit et créez une clé API.',
+    openRouterApiBalance: 'Solde OpenRouter',
+    openRouterApiBalanceDescription: 'Crédit restant indiqué par OpenRouter.',
+    openRouterModelDescription:
+      'Modèles vocaux facturés à la durée, triés par coût horaire en USD.',
+    openRouterLanguageDescription:
+      'Langue ISO 639-1 facultative ; effacez-la pour la détection automatique.',
+    automaticLanguage: 'Détection automatique',
+    hour: 'heure',
+    priceUnavailable: 'Prix indisponible',
+    transcriptionMethod: 'Méthode de transcription',
+    websocketMethodDescription:
+      'WebSocket maintient une connexion continue et convient mieux à la transcription en temps réel.',
+    restMethodDescription:
+      'REST traite des extraits audio périodiques ; WebSocket convient mieux à la transcription en temps réel.',
+    transcriptSpeed: 'Vitesse de transcription',
+    transcriptSpeedDescription:
+      'Une vitesse élevée affiche le texte provisoire plus tôt, mais peut réduire sa précision.',
+    transcriptionSpeeds: {
+      low: 'Faible',
+      medium: 'Moyenne',
+      high: 'Élevée',
+    },
     logging: 'Journalisation',
     logLevel: 'Niveau de journal',
     logLevelDescription: 'Choisissez la quantité de détails de diagnostic enregistrés localement.',
@@ -109,6 +134,7 @@ export default {
       'Choisissez le service utilisé pour la transcription en direct.',
     transcriptionProviders: {
       deepgram: 'Deepgram',
+      openrouter: 'OpenRouter',
     },
     connection: 'Connexion',
     recognition: 'Reconnaissance',
@@ -200,6 +226,7 @@ export default {
     apiKeyRemoved: 'Clé API retirée',
     microphoneRequired: 'Activez au moins une source audio.',
     apiKeyRequired: "Ajoutez une clé API Deepgram avant l'enregistrement.",
+    transcriptionApiKeyRequired: "Ajoutez une clé API {{provider}} avant l'enregistrement.",
   },
   errors: {
     generic: "Une erreur s'est produite.",

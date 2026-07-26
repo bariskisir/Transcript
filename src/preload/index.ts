@@ -25,15 +25,20 @@ const api: TranscriptApi = {
   bootstrap: () => ipcRenderer.invoke(IpcChannel.AppBootstrap),
   /** Atomically merges validated application settings fields. */
   saveSettings: (patch) => ipcRenderer.invoke(IpcChannel.SettingsSave, patch),
-  /** Validates, encrypts, and saves a Deepgram API key. */
-  saveApiKey: (apiKey) => ipcRenderer.invoke(IpcChannel.CredentialsSave, apiKey),
-  /** Retrieves the decrypted Deepgram API key only when requested by settings. */
-  getApiKey: () => ipcRenderer.invoke(IpcChannel.CredentialsGet),
-  /** Deletes the encrypted Deepgram API key. */
-  deleteApiKey: () => ipcRenderer.invoke(IpcChannel.CredentialsDelete),
-  /** Retrieves optional balance data for the encrypted Deepgram API key. */
-  getApiBalance: () => ipcRenderer.invoke(IpcChannel.CredentialsBalance),
-  /** Opens one Deepgram stream for every enabled audio source. */
+  /** Validates, encrypts, and saves one transcription provider API key. */
+  saveApiKey: (provider, apiKey) =>
+    ipcRenderer.invoke(IpcChannel.CredentialsSave, provider, apiKey),
+  /** Retrieves one decrypted provider API key only when requested by settings. */
+  getApiKey: (provider) => ipcRenderer.invoke(IpcChannel.CredentialsGet, provider),
+  /** Deletes one encrypted transcription provider API key. */
+  deleteApiKey: (provider) => ipcRenderer.invoke(IpcChannel.CredentialsDelete, provider),
+  /** Retrieves optional balance data for one encrypted provider API key. */
+  getApiBalance: (provider) => ipcRenderer.invoke(IpcChannel.CredentialsBalance, provider),
+  /** Retrieves public Deepgram streaming speech models without using the saved API key. */
+  getDeepgramModels: () => ipcRenderer.invoke(IpcChannel.DeepgramModels),
+  /** Retrieves duration-priced OpenRouter speech models. */
+  getOpenRouterModels: () => ipcRenderer.invoke(IpcChannel.OpenRouterModels),
+  /** Opens one transcription pipeline for every enabled audio source. */
   startSession: (request) => ipcRenderer.invoke(IpcChannel.SessionStart, request),
   /** Flushes and closes the active transcription session. */
   stopSession: () => ipcRenderer.invoke(IpcChannel.SessionStop),

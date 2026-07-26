@@ -1,237 +1,15 @@
 /**
- * Defines the Deepgram model catalog, model-specific languages, and streaming option values.
+ * Defines renderer-safe Deepgram catalog metadata and streaming option values.
  */
 
-const ENGLISH_GENERAL = ['en', 'en-US', 'en-AU', 'en-GB', 'en-IN', 'en-NZ'] as const
-const ENGLISH_MEDICAL = [
-  'en',
-  'en-US',
-  'en-AU',
-  'en-CA',
-  'en-GB',
-  'en-IE',
-  'en-IN',
-  'en-NZ',
-] as const
-const ENGLISH_SPECIALIZED = ['en', 'en-US'] as const
-
-const NOVA_3_LANGUAGES = [
-  'ar',
-  'ar-AE',
-  'ar-SA',
-  'ar-QA',
-  'ar-KW',
-  'ar-SY',
-  'ar-LB',
-  'ar-PS',
-  'ar-JO',
-  'ar-EG',
-  'ar-SD',
-  'ar-TD',
-  'ar-MA',
-  'ar-DZ',
-  'ar-TN',
-  'ar-IQ',
-  'ar-IR',
-  'be',
-  'bn',
-  'bs',
-  'bg',
-  'ca',
-  'zh-HK',
-  'zh',
-  'zh-CN',
-  'zh-Hans',
-  'zh-TW',
-  'zh-Hant',
-  'hr',
-  'cs',
-  'da',
-  'da-DK',
-  'nl',
-  ...ENGLISH_GENERAL,
-  'et',
-  'fi',
-  'nl-BE',
-  'fr',
-  'fr-CA',
-  'de',
-  'de-CH',
-  'el',
-  'gu',
-  'gu-IN',
-  'he',
-  'hi',
-  'hu',
-  'id',
-  'it',
-  'ja',
-  'kn',
-  'ko',
-  'ko-KR',
-  'lv',
-  'lt',
-  'mk',
-  'ms',
-  'mr',
-  'no',
-  'fa',
-  'pl',
-  'pt',
-  'pt-BR',
-  'pt-PT',
-  'ro',
-  'ru',
-  'sr',
-  'sk',
-  'sl',
-  'es',
-  'es-419',
-  'sv',
-  'sv-SE',
-  'tl',
-  'ta',
-  'te',
-  'th',
-  'th-TH',
-  'tr',
-  'uk',
-  'ur',
-  'vi',
-] as const
-
-const NOVA_2_LANGUAGES = [
-  'bg',
-  'ca',
-  'zh',
-  'zh-CN',
-  'zh-Hans',
-  'zh-TW',
-  'zh-Hant',
-  'zh-HK',
-  'cs',
-  'da',
-  'da-DK',
-  'nl',
-  ...ENGLISH_GENERAL,
-  'et',
-  'fi',
-  'nl-BE',
-  'fr',
-  'fr-CA',
-  'de',
-  'de-CH',
-  'el',
-  'hi',
-  'hu',
-  'id',
-  'it',
-  'ja',
-  'ko',
-  'ko-KR',
-  'lv',
-  'lt',
-  'ms',
-  'no',
-  'pl',
-  'pt',
-  'pt-BR',
-  'pt-PT',
-  'ro',
-  'ru',
-  'sk',
-  'es',
-  'es-419',
-  'sv',
-  'sv-SE',
-  'th',
-  'th-TH',
-  'tr',
-  'uk',
-  'vi',
-] as const
-
-export const DEEPGRAM_MODELS = [
-  {
-    value: 'nova-3',
-    label: 'Nova-3 General',
-    languages: NOVA_3_LANGUAGES,
-    vocabularyParameter: 'keyterm',
-  },
-  {
-    value: 'nova-3-medical',
-    label: 'Nova-3 Medical',
-    languages: ENGLISH_MEDICAL,
-    vocabularyParameter: 'keyterm',
-  },
-  {
-    value: 'nova-2',
-    label: 'Nova-2 General',
-    languages: NOVA_2_LANGUAGES,
-    vocabularyParameter: 'keywords',
-  },
-  {
-    value: 'nova-2-meeting',
-    label: 'Nova-2 Meeting',
-    languages: ENGLISH_SPECIALIZED,
-    vocabularyParameter: 'keywords',
-  },
-  {
-    value: 'nova-2-phonecall',
-    label: 'Nova-2 Phone Call',
-    languages: ENGLISH_SPECIALIZED,
-    vocabularyParameter: 'keywords',
-  },
-  {
-    value: 'nova-2-finance',
-    label: 'Nova-2 Finance',
-    languages: ENGLISH_SPECIALIZED,
-    vocabularyParameter: 'keywords',
-  },
-  {
-    value: 'nova-2-conversationalai',
-    label: 'Nova-2 Conversational AI',
-    languages: ENGLISH_SPECIALIZED,
-    vocabularyParameter: 'keywords',
-  },
-  {
-    value: 'nova-2-voicemail',
-    label: 'Nova-2 Voicemail',
-    languages: ENGLISH_SPECIALIZED,
-    vocabularyParameter: 'keywords',
-  },
-  {
-    value: 'nova-2-video',
-    label: 'Nova-2 Video',
-    languages: ENGLISH_SPECIALIZED,
-    vocabularyParameter: 'keywords',
-  },
-  {
-    value: 'nova-2-medical',
-    label: 'Nova-2 Medical',
-    languages: ENGLISH_SPECIALIZED,
-    vocabularyParameter: 'keywords',
-  },
-  {
-    value: 'nova-2-drivethru',
-    label: 'Nova-2 Drive-Thru',
-    languages: ENGLISH_SPECIALIZED,
-    vocabularyParameter: 'keywords',
-  },
-  {
-    value: 'nova-2-automotive',
-    label: 'Nova-2 Automotive',
-    languages: ENGLISH_SPECIALIZED,
-    vocabularyParameter: 'keywords',
-  },
-  {
-    value: 'nova-2-atc',
-    label: 'Nova-2 Air Traffic Control',
-    languages: ENGLISH_SPECIALIZED,
-    vocabularyParameter: 'keywords',
-  },
-] as const
-
+export const DEEPGRAM_PUBLIC_MODELS_URL = 'https://api.deepgram.com/v1/models'
+export const DEEPGRAM_DEFAULT_MODEL = 'nova-3-general'
+export const DEEPGRAM_STREAMING_PRICES_USD_PER_HOUR = {
+  nova3Monolingual: 0.288,
+  nova2: 0.35,
+  enhanced: 0.99,
+  base: 0.87,
+} as const
 export const DEEPGRAM_DIARIZATION_MODES = ['off', 'latest', 'v1'] as const
 export const DEEPGRAM_REDACTION_MODES = [
   'none',
@@ -242,19 +20,42 @@ export const DEEPGRAM_REDACTION_MODES = [
   'aggressive_numbers',
 ] as const
 
-export type DeepgramModel = (typeof DEEPGRAM_MODELS)[number]['value']
 export type DeepgramDiarization = (typeof DEEPGRAM_DIARIZATION_MODES)[number]
 export type DeepgramRedaction = (typeof DEEPGRAM_REDACTION_MODES)[number]
+export type DeepgramVocabularyParameter = 'keyterm' | 'keywords' | null
 
-export const DEEPGRAM_MODEL_IDS = DEEPGRAM_MODELS.map((model) => model.value) as [
-  DeepgramModel,
-  ...DeepgramModel[],
-]
+/** Public metadata for one canonical streaming speech-to-text model. */
+export interface DeepgramSpeechModel {
+  id: string
+  name: string
+  languages: string[]
+  hourlyPriceUsd: number | null
+  vocabularyParameter: DeepgramVocabularyParameter
+}
 
-/** Returns the catalog entry for a supported streaming model. */
-export const getDeepgramModel = (model: DeepgramModel) =>
-  DEEPGRAM_MODELS.find((candidate) => candidate.value === model) ?? DEEPGRAM_MODELS[0]
+/** Maps historical general-model aliases to their canonical catalog identifiers. */
+export const canonicalizeDeepgramModel = (model: string): string => {
+  if (model === 'nova-3') return 'nova-3-general'
+  if (model === 'nova-2') return 'nova-2-general'
+  return model
+}
 
-/** Returns whether a language can be sent with the selected model. */
-export const isDeepgramLanguageSupported = (model: DeepgramModel, language: string): boolean =>
-  getDeepgramModel(model).languages.some((candidate) => candidate === language)
+/** Selects the vocabulary query supported by a canonical model family. */
+export const getDeepgramVocabularyParameter = (model: string): DeepgramVocabularyParameter => {
+  if (model.startsWith('nova-3')) return 'keyterm'
+  if (model.startsWith('whisper-') || model === 'phoneme') return null
+  return 'keywords'
+}
+
+/** Returns Deepgram's published Pay-As-You-Go streaming rate for a public model family. */
+export const getDeepgramHourlyPriceUsd = (model: string, architecture: string): number | null => {
+  if (model.startsWith('nova-3')) return DEEPGRAM_STREAMING_PRICES_USD_PER_HOUR.nova3Monolingual
+  if (model.startsWith('nova-2')) return DEEPGRAM_STREAMING_PRICES_USD_PER_HOUR.nova2
+  if (model.startsWith('enhanced-') || architecture === 'polaris') {
+    return DEEPGRAM_STREAMING_PRICES_USD_PER_HOUR.enhanced
+  }
+  if (architecture === 'base' && model !== 'phoneme' && !model.startsWith('whisper-')) {
+    return DEEPGRAM_STREAMING_PRICES_USD_PER_HOUR.base
+  }
+  return null
+}

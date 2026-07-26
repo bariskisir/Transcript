@@ -89,6 +89,29 @@ export default {
     apiBalanceDescription: 'Deepgram에서 보고한 사용 가능한 크레딧입니다.',
     model: '음성 모델',
     modelDescription: '이 녹음에 사용할 Deepgram 라이브 모델을 선택하세요.',
+    openRouterApiKey: 'OpenRouter API 키',
+    openRouterApiKeyCreditNotice:
+      'OpenRouter는 유료 서비스입니다. 크레딧을 추가하고 API 키를 만드세요.',
+    openRouterApiBalance: 'OpenRouter 잔액',
+    openRouterApiBalanceDescription: 'OpenRouter에서 보고한 남은 크레딧입니다.',
+    openRouterModelDescription: '시간 기준 음성 모델을 시간당 USD 비용순으로 표시합니다.',
+    openRouterLanguageDescription: '선택적 ISO 639-1 언어입니다. 자동 감지를 사용하려면 비우세요.',
+    automaticLanguage: '자동 감지',
+    hour: '시간',
+    priceUnavailable: '가격 정보 없음',
+    transcriptionMethod: '트랜스크립션 방식',
+    websocketMethodDescription:
+      'WebSocket은 연결을 계속 유지하므로 실시간 트랜스크립션에 더 적합합니다.',
+    restMethodDescription:
+      'REST는 오디오 조각을 주기적으로 처리하며, 실시간 트랜스크립션에는 WebSocket이 더 적합합니다.',
+    transcriptSpeed: '트랜스크립션 속도',
+    transcriptSpeedDescription:
+      '속도가 높을수록 임시 텍스트가 빨리 표시되지만 정확도가 낮아질 수 있습니다.',
+    transcriptionSpeeds: {
+      low: '낮음',
+      medium: '중간',
+      high: '높음',
+    },
     logging: '로깅',
     logLevel: '로그 레벨',
     logLevelDescription: '애플리케이션 로그의 상세도를 제어합니다.',
@@ -107,6 +130,7 @@ export default {
     transcriptionProviderDescription: '실시간 녹음에 사용할 서비스를 선택하세요.',
     transcriptionProviders: {
       deepgram: 'Deepgram',
+      openrouter: 'OpenRouter',
     },
     connection: '연결',
     recognition: '인식',
@@ -197,6 +221,7 @@ export default {
     apiKeyRemoved: 'API 키 제거됨',
     microphoneRequired: '최소 하나의 오디오 소스를 활성화하세요.',
     apiKeyRequired: '녹음 전에 Deepgram API 키를 추가하세요.',
+    transcriptionApiKeyRequired: '녹음 전에 {{provider}} API 키를 추가하세요.',
   },
   errors: {
     generic: '문제가 발생했습니다.',

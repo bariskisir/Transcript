@@ -34,7 +34,9 @@ export const useRecordingActions = () => {
   const dispatch = useAppDispatch()
   const settings = useAppSelector((state) => state.app.settings)
   const platform = useAppSelector((state) => state.app.platform)
-  const hasApiKey = useAppSelector((state) => state.app.hasApiKey)
+  const hasApiKey = useAppSelector(
+    (state) => state.app.hasApiKeys[state.app.settings.transcriptionProvider],
+  )
   const currentSessionId = useAppSelector((state) => state.app.currentSession?.id ?? null)
   const { message } = AntdApp.useApp()
   const { t } = useTranslation()
@@ -45,7 +47,11 @@ export const useRecordingActions = () => {
     if (!hasApiKey) {
       dispatch(setSettingsSection('transcription'))
       dispatch(setPage('settings'))
-      void message.warning(t('notices.apiKeyRequired'))
+      void message.warning(
+        t('notices.transcriptionApiKeyRequired', {
+          provider: t(`settings.transcriptionProviders.${settings.transcriptionProvider}`),
+        }),
+      )
       return
     }
     if (!settings.microphoneEnabled && !settings.speakerEnabled) {

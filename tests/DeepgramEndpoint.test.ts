@@ -21,8 +21,8 @@ describe('buildDeepgramEndpoint', () => {
   })
 
   it('includes the model parameter', () => {
-    const url = buildDeepgramEndpoint(makeSettings({ model: 'nova-3' }))
-    expect(url).toContain('model=nova-3')
+    const url = buildDeepgramEndpoint(makeSettings({ model: 'nova-3-general' }))
+    expect(url).toContain('model=nova-3-general')
   })
 
   it('includes the language parameter', () => {
@@ -109,20 +109,32 @@ describe('buildDeepgramEndpoint', () => {
 
   it('includes vocabulary terms as repeated query parameters', () => {
     const url = buildDeepgramEndpoint(
-      makeSettings({ model: 'nova-3', vocabulary: ['alpha', 'beta'] }),
+      makeSettings({ model: 'nova-3-general', vocabulary: ['alpha', 'beta'] }),
     )
     expect(url).toContain('keyterm=alpha')
     expect(url).toContain('keyterm=beta')
   })
 
   it('uses keyterm parameter name for nova-3 models', () => {
-    const url = buildDeepgramEndpoint(makeSettings({ model: 'nova-3', vocabulary: ['term1'] }))
+    const url = buildDeepgramEndpoint(
+      makeSettings({ model: 'nova-3-general', vocabulary: ['term1'] }),
+    )
     expect(url).toContain('keyterm=term1')
   })
 
   it('uses keywords parameter name for nova-2 models', () => {
-    const url = buildDeepgramEndpoint(makeSettings({ model: 'nova-2', vocabulary: ['term1'] }))
+    const url = buildDeepgramEndpoint(
+      makeSettings({ model: 'nova-2-general', vocabulary: ['term1'] }),
+    )
     expect(url).toContain('keywords=term1')
+  })
+
+  it('omits unsupported vocabulary parameters for Whisper models', () => {
+    const url = buildDeepgramEndpoint(
+      makeSettings({ model: 'whisper-large', vocabulary: ['term1'] }),
+    )
+    expect(url).not.toContain('keyterm=')
+    expect(url).not.toContain('keywords=')
   })
 
   it('includes the model version', () => {

@@ -7,6 +7,7 @@ import { app, dialog, ipcMain, shell, type BrowserWindow, type WebContents } fro
 import { IpcChannel } from '@shared/IpcChannel'
 import { APP_AUTHOR_URL } from '@shared/appInfo'
 import { TRANSLATION_PROVIDERS, TRANSLATION_TARGET_LANGUAGES } from '@shared/translation'
+import { TRANSCRIPTION_PROVIDERS, type TranscriptionProvider } from '@shared/transcription'
 import {
   AUDIO_SOURCES,
   LOG_LEVELS,
@@ -19,8 +20,12 @@ import { settingsPatchSchema, settingsSchema } from './settingsSchema'
 import type AppUpdater from './services/AppUpdater'
 import type CredentialService from './services/CredentialService'
 import type DeepgramAccountService from './services/DeepgramAccountService'
+import type DeepgramCatalogService from './services/DeepgramCatalogService'
+import { reconcileDeepgramSettings } from './services/DeepgramCatalogService'
 import { renderSession } from './services/ExportService'
 import type LoggerService from './services/LoggerService'
+import type OpenRouterAccountService from './services/OpenRouterAccountService'
+import type OpenRouterCatalogService from './services/OpenRouterCatalogService'
 import type StorageService from './services/StorageService'
 import type TranscriptService from './services/TranscriptService'
 
@@ -44,6 +49,7 @@ const dialogTitleSchema = z.string().trim().min(1).max(120)
 const translationProviderSchema = z.enum(TRANSLATION_PROVIDERS)
 const translationTargetSchema = z.enum(TRANSLATION_TARGET_LANGUAGES)
 const apiKeySchema = z.string().trim().min(20).max(512)
+const transcriptionProviderSchema = z.enum(TRANSCRIPTION_PROVIDERS)
 const rendererLogSchema = z.object({
   level: z.enum(LOG_LEVELS),
   module: z.string().trim().min(1).max(100),
@@ -55,14 +61,18 @@ const TRUSTED_EXTERNAL_ORIGINS = new Set([
   'https://deepgram.com',
   'https://console.deepgram.com',
   'https://developers.deepgram.com',
+  'https://openrouter.ai',
   'https://github.com',
   APP_AUTHOR_URL,
 ])
 
 interface IpcServices {
   storage: StorageService
-  credentials: CredentialService
+  credentials: Record<TranscriptionProvider, CredentialService>
   deepgramAccount: DeepgramAccountService
+  deepgramCatalog: DeepgramCatalogService
+  openRouterAccount: OpenRouterAccountService
+  openRouterCatalog: OpenRouterCatalogService
   transcript: TranscriptService
   updater: AppUpdater
   logger: LoggerService
@@ -95,13 +105,36 @@ export const registerIpc = (window: BrowserWindow, services: IpcServices): void 
 
   ipcMain.handle(IpcChannel.AppBootstrap, async (event) => {
     assertSender(event.sender)
-    const [settings, initialSessions, hasApiKey] = await Promise.all([
+    const [
+      loadedSettings,
+      initialSessions,
+      hasDeepgramApiKey,
+      hasOpenRouterApiKey,
+      deepgramModels,
+      openRouterModels,
+    ] = await Promise.all([
       services.storage.loadSettings(),
       services.storage.listSessions(),
-      services.credentials.hasApiKey(),
+      services.credentials.deepgram.hasApiKey(),
+      services.credentials.openrouter.hasApiKey(),
+      services.deepgramCatalog.getModels(),
+      services.openRouterCatalog.getModels(),
     ])
+    const reconciledDeepgram = reconcileDeepgramSettings(
+      loadedSettings.transcriptionProviderSettings.deepgram,
+      deepgramModels,
+    )
+    const settings =
+      JSON.stringify(reconciledDeepgram) ===
+      JSON.stringify(loadedSettings.transcriptionProviderSettings.deepgram)
+        ? loadedSettings
+        : await services.storage.updateSettings({
+            transcriptionProviderSettings: { deepgram: reconciledDeepgram },
+          })
     if (initialSessions.length === 0) {
-      await services.storage.createSession(settings.transcriptionProviderSettings.deepgram.language)
+      const providerSettings =
+        settings.transcriptionProviderSettings[settings.transcriptionProvider]
+      await services.storage.createSession(providerSettings.language || settings.uiLanguage)
     }
     const sessions =
       initialSessions.length === 0 ? await services.storage.listSessions() : initialSessions
@@ -112,7 +145,9 @@ export const registerIpc = (window: BrowserWindow, services: IpcServices): void 
       settings,
       sessions,
       currentSession,
-      hasApiKey,
+      hasApiKeys: { deepgram: hasDeepgramApiKey, openrouter: hasOpenRouterApiKey },
+      deepgramModels,
+      openRouterModels,
       platform: process.platform,
       version: app.getVersion(),
     }
@@ -125,25 +160,44 @@ export const registerIpc = (window: BrowserWindow, services: IpcServices): void 
     services.logger.setLevel(savedSettings.logLevel)
     return savedSettings
   })
-  ipcMain.handle(IpcChannel.CredentialsSave, async (event, input: unknown) => {
+  ipcMain.handle(
+    IpcChannel.CredentialsSave,
+    async (event, providerInput: unknown, input: unknown) => {
+      assertSender(event.sender)
+      const provider = transcriptionProviderSchema.parse(providerInput)
+      const apiKey = apiKeySchema.parse(input)
+      const balance =
+        provider === 'deepgram'
+          ? await services.deepgramAccount.verifyAndGetBalance(apiKey)
+          : await services.openRouterAccount.verifyAndGetBalance(apiKey)
+      await services.credentials[provider].saveApiKey(apiKey)
+      return balance
+    },
+  )
+  ipcMain.handle(IpcChannel.CredentialsGet, async (event, providerInput: unknown) => {
     assertSender(event.sender)
-    const apiKey = apiKeySchema.parse(input)
-    const balance = await services.deepgramAccount.verifyAndGetBalance(apiKey)
-    await services.credentials.saveApiKey(apiKey)
-    return balance
+    return services.credentials[transcriptionProviderSchema.parse(providerInput)].getApiKey()
   })
-  ipcMain.handle(IpcChannel.CredentialsGet, async (event) => {
+  ipcMain.handle(IpcChannel.CredentialsDelete, async (event, providerInput: unknown) => {
     assertSender(event.sender)
-    return services.credentials.getApiKey()
+    await services.credentials[transcriptionProviderSchema.parse(providerInput)].deleteApiKey()
   })
-  ipcMain.handle(IpcChannel.CredentialsDelete, async (event) => {
+  ipcMain.handle(IpcChannel.CredentialsBalance, async (event, providerInput: unknown) => {
     assertSender(event.sender)
-    await services.credentials.deleteApiKey()
+    const provider = transcriptionProviderSchema.parse(providerInput)
+    const apiKey = await services.credentials[provider].getApiKey()
+    if (!apiKey) return []
+    return provider === 'deepgram'
+      ? services.deepgramAccount.getBalance(apiKey)
+      : services.openRouterAccount.getBalance(apiKey)
   })
-  ipcMain.handle(IpcChannel.CredentialsBalance, async (event) => {
+  ipcMain.handle(IpcChannel.DeepgramModels, async (event) => {
     assertSender(event.sender)
-    const apiKey = await services.credentials.getApiKey()
-    return apiKey ? services.deepgramAccount.getBalance(apiKey) : []
+    return services.deepgramCatalog.getModels()
+  })
+  ipcMain.handle(IpcChannel.OpenRouterModels, async (event) => {
+    assertSender(event.sender)
+    return services.openRouterCatalog.getModels()
   })
   ipcMain.handle(IpcChannel.SessionStart, async (event, input: unknown) => {
     assertSender(event.sender)

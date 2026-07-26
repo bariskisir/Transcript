@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Button, Select, Switch, Tooltip } from 'antd'
 import { Languages, Mic2, MonitorSpeaker, Radio, Square } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { getDeepgramModel } from '@shared/deepgram'
+import { ORDERED_OPENROUTER_TRANSCRIPTION_LANGUAGES } from '@shared/openrouter'
 import { TRANSLATION_TARGET_LANGUAGES, type TranslationTargetLanguage } from '@shared/translation'
 import type { AppSettingsPatch } from '@shared/types'
 import type AudioCaptureService from '@renderer/audio/AudioCaptureService'
@@ -33,6 +33,7 @@ const ControlBar = ({
   const platform = useAppSelector((state) => state.app.platform)
   const session = useAppSelector((state) => state.app.session.state)
   const levels = useAppSelector((state) => state.app.levels)
+  const deepgramModels = useAppSelector((state) => state.app.deepgramModels)
   const [devices, setDevices] = useState<AudioDevice[]>([])
   const { t } = useTranslation()
   const { theme } = useTheme()
@@ -42,6 +43,7 @@ const ControlBar = ({
   const recording = session === 'recording'
   const canStop = session === 'connecting' || recording
   const deepgramSettings = settings.transcriptionProviderSettings.deepgram
+  const openRouterSettings = settings.transcriptionProviderSettings.openrouter
 
   useEffect(() => {
     const refresh = (): void => {
@@ -63,14 +65,54 @@ const ControlBar = ({
   const speakerDeviceId = speakers.some((device) => device.id === settings.speakerDeviceId)
     ? settings.speakerDeviceId
     : 'default'
-  const speechLanguages = getDeepgramModel(deepgramSettings.model).languages
   const languageNames = useMemo(
     () => new Intl.DisplayNames([settings.uiLanguage, 'en'], { type: 'language' }),
     [settings.uiLanguage],
   )
 
-  /** Formats one Deepgram BCP-47 language code for the active interface locale. */
-  const formatLanguage = (code: string): string => `${languageNames.of(code) ?? code} (${code})`
+  const speechLanguageOptions = useMemo(() => {
+    /** Formats API language identifiers defensively because some legacy models use non-BCP-47 tags. */
+    const formatSpeechLanguage = (language: string): string => {
+      try {
+        return languageNames.of(language) ?? language
+      } catch {
+        return language
+      }
+    }
+    const languages =
+      settings.transcriptionProvider === 'deepgram'
+        ? (deepgramModels.find((model) => model.id === deepgramSettings.model)?.languages ?? [
+            deepgramSettings.language,
+          ])
+        : ORDERED_OPENROUTER_TRANSCRIPTION_LANGUAGES
+    return [
+      ...(settings.transcriptionProvider === 'openrouter'
+        ? [
+            {
+              value: '',
+              searchText: t('settings.automaticLanguage'),
+              label: t('settings.automaticLanguage'),
+            },
+          ]
+        : []),
+      ...languages.map((language) => ({
+        value: language,
+        searchText: `${formatSpeechLanguage(language)} ${language}`,
+        label: `${formatSpeechLanguage(language)} (${language})`,
+      })),
+    ]
+  }, [
+    deepgramModels,
+    deepgramSettings.language,
+    deepgramSettings.model,
+    languageNames,
+    settings.transcriptionProvider,
+    t,
+  ])
+  const speechLanguage =
+    settings.transcriptionProvider === 'deepgram'
+      ? deepgramSettings.language
+      : openRouterSettings.language
 
   /** Formats one target language in the active interface locale without a technical suffix. */
   const formatTranslationLanguage = (code: string): string => languageNames.of(code) ?? code
@@ -157,17 +199,18 @@ const ControlBar = ({
         </div>
         <Select
           size="small"
-          value={deepgramSettings.language}
+          value={speechLanguage}
           disabled={recording || busy}
-          onChange={(language) =>
-            void update({ transcriptionProviderSettings: { deepgram: { language } } })
+          onChange={(language: string) =>
+            void update({
+              transcriptionProviderSettings: {
+                [settings.transcriptionProvider]: { language },
+              },
+            })
           }
           showSearch
-          optionFilterProp="label"
-          options={speechLanguages.map((language) => ({
-            value: language,
-            label: formatLanguage(language),
-          }))}
+          optionFilterProp="searchText"
+          options={speechLanguageOptions}
         />
       </div>
 

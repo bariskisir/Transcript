@@ -2,7 +2,7 @@
  * Validates Deepgram credentials and retrieves optional project balance data.
  */
 
-import type { DeepgramBalance } from '@shared/types'
+import type { ApiBalance } from '@shared/types'
 import { z } from 'zod'
 
 const projectsSchema = z.object({
@@ -23,13 +23,13 @@ const BALANCE_TIMEOUT_MS = 4_000
 
 export default class DeepgramAccountService {
   /** Validates an API key and returns balance data when its project supports it. */
-  public async verifyAndGetBalance(apiKey: string): Promise<DeepgramBalance[]> {
+  public async verifyAndGetBalance(apiKey: string): Promise<ApiBalance[]> {
     const projectIds = await this.fetchProjectIds(apiKey)
     return this.fetchBalances(apiKey, projectIds)
   }
 
   /** Retrieves balance data without turning an unsupported account into a UI error. */
-  public async getBalance(apiKey: string): Promise<DeepgramBalance[]> {
+  public async getBalance(apiKey: string): Promise<ApiBalance[]> {
     try {
       const projectIds = await this.fetchProjectIds(apiKey)
       return await this.fetchBalances(apiKey, projectIds)
@@ -50,9 +50,9 @@ export default class DeepgramAccountService {
   }
 
   /** Aggregates supported balance responses across all projects by billing unit. */
-  private async fetchBalances(apiKey: string, projectIds: string[]): Promise<DeepgramBalance[]> {
+  private async fetchBalances(apiKey: string, projectIds: string[]): Promise<ApiBalance[]> {
     const responses = await Promise.all(
-      projectIds.map(async (projectId): Promise<DeepgramBalance[]> => {
+      projectIds.map(async (projectId): Promise<ApiBalance[]> => {
         try {
           const response = await fetch(
             `https://api.deepgram.com/v1/projects/${encodeURIComponent(projectId)}/balances`,

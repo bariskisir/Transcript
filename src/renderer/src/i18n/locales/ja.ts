@@ -90,6 +90,29 @@ export default {
     apiBalanceDescription: 'Deepgramから報告された利用可能なクレジット。',
     model: '音声モデル',
     modelDescription: 'この文字起こしに使用するDeepgramのライブモデルを選択してください。',
+    openRouterApiKey: 'OpenRouter APIキー',
+    openRouterApiKeyCreditNotice:
+      'OpenRouterは有料サービスです。クレジットを追加してAPIキーを作成してください。',
+    openRouterApiBalance: 'OpenRouter残高',
+    openRouterApiBalanceDescription: 'OpenRouterが報告した残りのクレジットです。',
+    openRouterModelDescription: '時間課金の音声モデルを1時間あたりのUSD料金順に表示します。',
+    openRouterLanguageDescription: '任意のISO 639-1言語です。自動検出するには空にしてください。',
+    automaticLanguage: '自動検出',
+    hour: '時間',
+    priceUnavailable: '価格情報なし',
+    transcriptionMethod: '文字起こし方式',
+    websocketMethodDescription:
+      'WebSocket は接続を維持するため、リアルタイム文字起こしに適しています。',
+    restMethodDescription:
+      'REST は音声を定期的に処理します。リアルタイム文字起こしには WebSocket の方が適しています。',
+    transcriptSpeed: '文字起こし速度',
+    transcriptSpeedDescription:
+      '速度を上げると暫定テキストは早く表示されますが、精度が下がる場合があります。',
+    transcriptionSpeeds: {
+      low: '低',
+      medium: '中',
+      high: '高',
+    },
     logging: 'ログ',
     logLevel: 'ログレベル',
     logLevelDescription: 'アプリケーションログの詳細度を制御します。',
@@ -108,6 +131,7 @@ export default {
     transcriptionProviderDescription: 'ライブ文字起こしに使用するサービスを選択してください。',
     transcriptionProviders: {
       deepgram: 'Deepgram',
+      openrouter: 'OpenRouter',
     },
     connection: '接続',
     recognition: '認識',
@@ -200,6 +224,7 @@ export default {
     apiKeyRemoved: 'APIキーを削除しました',
     microphoneRequired: '少なくとも1つの音声ソースを有効にしてください。',
     apiKeyRequired: '録音前にDeepgram APIキーを追加してください。',
+    transcriptionApiKeyRequired: '録音前に{{provider}}のAPIキーを追加してください。',
   },
   errors: {
     generic: '問題が発生しました。',

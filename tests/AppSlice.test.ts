@@ -32,7 +32,7 @@ import type {
   SessionSummary,
   TranscriptResultEvent,
   TranslationResultEvent,
-  DeepgramBalance,
+  ApiBalance,
   UpdateStateEvent,
   TranscriptSegment,
   SessionStateEvent,
@@ -61,7 +61,9 @@ function makeBootstrapPayload(overrides: Partial<BootstrapPayload> = {}): Bootst
       segments: [],
       translations: [],
     },
-    hasApiKey: false,
+    hasApiKeys: { deepgram: false, openrouter: false },
+    deepgramModels: [],
+    openRouterModels: [],
     platform: 'win32',
     version: '1.0.0',
     ...overrides,
@@ -189,10 +191,13 @@ describe('appSlice', () => {
       expect(state.currentSession?.title).toBe('Active')
     })
 
-    it('hydrates hasApiKey and version', () => {
-      const payload = makeBootstrapPayload({ hasApiKey: true, version: '3.0.0' })
+    it('hydrates provider API key state and version', () => {
+      const payload = makeBootstrapPayload({
+        hasApiKeys: { deepgram: true, openrouter: false },
+        version: '3.0.0',
+      })
       const state = reducer(undefined, hydrate(payload))
-      expect(state.hasApiKey).toBe(true)
+      expect(state.hasApiKeys.deepgram).toBe(true)
       expect(state.version).toBe('3.0.0')
     })
   })
@@ -235,16 +240,16 @@ describe('appSlice', () => {
 
   describe('setHasApiKey', () => {
     it('updates the API key availability flag', () => {
-      const state = reducer(undefined, setHasApiKey(true))
-      expect(state.hasApiKey).toBe(true)
+      const state = reducer(undefined, setHasApiKey({ provider: 'openrouter', available: true }))
+      expect(state.hasApiKeys.openrouter).toBe(true)
     })
   })
 
   describe('setApiBalance', () => {
     it('replaces the balance array', () => {
-      const balance: DeepgramBalance[] = [{ amount: 50, units: 'USD' }]
-      const state = reducer(undefined, setApiBalance(balance))
-      expect(state.apiBalance).toEqual(balance)
+      const balance: ApiBalance[] = [{ amount: 50, units: 'USD' }]
+      const state = reducer(undefined, setApiBalance({ provider: 'openrouter', balance }))
+      expect(state.apiBalances.openrouter).toEqual(balance)
     })
   })
 
