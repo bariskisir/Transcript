@@ -135,6 +135,10 @@ export const registerIpc = (window: BrowserWindow, services: IpcServices): void 
         : await services.storage.updateSettings({
             transcriptionProviderSettings: { deepgram: reconciledDeepgram },
           })
+    if (process.platform === 'linux') {
+      settings.showTrayIcon = false
+      settings.minimizeToTrayOnClose = false
+    }
     window.webContents.setZoomFactor(settings.pageZoom)
     if (initialSessions.length === 0) {
       const providerSettings =
@@ -160,6 +164,10 @@ export const registerIpc = (window: BrowserWindow, services: IpcServices): void 
   ipcMain.handle(IpcChannel.SettingsSave, async (event, input: unknown) => {
     assertSender(event.sender)
     const patch = settingsPatchSchema.parse(input)
+    if (process.platform === 'linux') {
+      delete patch.showTrayIcon
+      delete patch.minimizeToTrayOnClose
+    }
     const savedSettings = await services.storage.updateSettings(patch)
     window.setAlwaysOnTop(savedSettings.alwaysOnTop)
     window.webContents.setZoomFactor(savedSettings.pageZoom)
@@ -214,8 +222,8 @@ export const registerIpc = (window: BrowserWindow, services: IpcServices): void 
       ...(parsed.transcriptId ? { transcriptId: parsed.transcriptId } : {}),
       ...(parsed.title ? { title: parsed.title } : {}),
     }
-    if (request.settings.speakerEnabled && process.platform !== 'win32') {
-      throw new Error('Speaker loopback capture is currently available on Windows only.')
+    if (request.settings.speakerEnabled && process.platform === 'darwin') {
+      throw new Error('Speaker loopback capture is not available on macOS.')
     }
     return services.transcript.start(request)
   })

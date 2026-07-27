@@ -207,6 +207,7 @@ export interface UpdateStateEvent {
   percent?: number
   releaseNotes?: string
   message?: string
+  pageUrl?: string
 }
 
 export interface TranscriptApi {

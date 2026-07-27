@@ -1,6 +1,6 @@
 {
   "name": "transcript",
-  "version": "3.6.0",
+  "version": "3.7.0",
   "description": "Secure real-time desktop transcription",
   "main": "./out/main/index.js",
   "author": "bariskisir",
@@ -22,7 +22,10 @@
     "package:win": "npm run build && electron-builder --win nsis --x64 --publish never && electron-builder --win nsis --arm64 --publish never",
     "package:win:x64": "npm run build && electron-builder --win nsis --x64 --publish never",
     "package:win:arm64": "npm run build && electron-builder --win nsis --arm64 --publish never",
-    "release": "npm run package:win"
+    "package:linux": "npm run build && electron-builder --linux --x64 --publish never && electron-builder --linux --arm64 --publish never",
+    "package:linux:x64": "npm run build && electron-builder --linux --x64 --publish never",
+    "package:linux:arm64": "npm run build && electron-builder --linux --arm64 --publish never",
+    "release": "npm run package:win && npm run package:linux"
   },
   "dependencies": {
     "bing-translate-api": "4.2.0",

@@ -48,14 +48,14 @@ const ControlBar = ({
   useEffect(() => {
     const refresh = (): void => {
       void captureService
-        .listDevices()
+        .listDevices(platform)
         .then(setDevices)
         .catch(() => setDevices([]))
     }
     refresh()
     navigator.mediaDevices.addEventListener('devicechange', refresh)
     return () => navigator.mediaDevices.removeEventListener('devicechange', refresh)
-  }, [captureService])
+  }, [captureService, platform])
 
   const microphones = devices.filter((device) => device.kind === 'microphone')
   const speakers = devices.filter((device) => device.kind === 'speaker')
@@ -156,7 +156,7 @@ const ControlBar = ({
       </div>
 
       <div
-        className={`${styles.sourceBlock} ${settings.speakerEnabled && platform === 'win32' ? styles.enabled : ''}`}
+        className={`${styles.sourceBlock} ${settings.speakerEnabled && platform !== 'darwin' ? styles.enabled : ''}`}
       >
         <div className={styles.sourceHeader}>
           <span className={`${styles.sourceIcon} ${styles.speakerTone}`}>
@@ -164,11 +164,11 @@ const ControlBar = ({
           </span>
           <span className={styles.sourceName}>{t('controls.speaker')}</span>
           <progress className={styles.meter} value={levels.speaker} max={1} />
-          <Tooltip title={platform !== 'win32' ? t('controls.unavailable') : undefined}>
+          <Tooltip title={platform === 'darwin' ? t('controls.unavailable') : undefined}>
             <Switch
               size="small"
-              checked={settings.speakerEnabled && platform === 'win32'}
-              disabled={platform !== 'win32' || recording || busy}
+              checked={settings.speakerEnabled && platform !== 'darwin'}
+              disabled={platform === 'darwin' || recording || busy}
               onChange={(checked) => void update({ speakerEnabled: checked })}
             />
           </Tooltip>
@@ -176,7 +176,7 @@ const ControlBar = ({
         <Select
           size="small"
           value={speakerDeviceId}
-          disabled={!settings.speakerEnabled || platform !== 'win32' || recording || busy}
+          disabled={!settings.speakerEnabled || platform === 'darwin' || recording || busy}
           onChange={(value) => void update({ speakerDeviceId: value })}
           options={[
             { value: 'default', label: t('controls.defaultSpeaker') },

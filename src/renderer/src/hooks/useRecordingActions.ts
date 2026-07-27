@@ -61,7 +61,7 @@ export const useRecordingActions = () => {
 
     const sessionSettings = {
       ...settings,
-      speakerEnabled: platform === 'win32' && settings.speakerEnabled,
+      speakerEnabled: (platform === 'win32' || platform === 'linux') && settings.speakerEnabled,
     }
     const sources: AudioSource[] = []
     if (sessionSettings.microphoneEnabled) sources.push('microphone')
@@ -77,6 +77,7 @@ export const useRecordingActions = () => {
         sources,
         microphoneDeviceId: sessionSettings.microphoneDeviceId,
         speakerDeviceId: sessionSettings.speakerDeviceId,
+        platform,
         onFrame: (source, samples) => {
           if (attempt.cancelled) return
           if (attempt.backendReady) {

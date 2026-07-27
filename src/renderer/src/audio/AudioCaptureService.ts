@@ -2,7 +2,7 @@
  * Captures microphone and speaker-loopback streams and converts each independently to PCM16.
  */
 
-import type { AudioSource } from '@shared/types'
+import type { AudioSource, DesktopPlatform } from '@shared/types'
 import { PCM_WORKLET_SOURCE } from '@shared/pcmWorkletSource'
 
 interface CaptureBinding {
@@ -18,6 +18,7 @@ interface StartOptions {
   sources: AudioSource[]
   microphoneDeviceId: string
   speakerDeviceId: string
+  platform: DesktopPlatform
   onFrame: (source: AudioSource, samples: ArrayBuffer) => void
   onLevel: (source: AudioSource, level: number) => void
   onDiagnostic?: (message: string, details: Record<string, unknown>) => void
@@ -37,38 +38,93 @@ const WORKLET_FLUSH_TIMEOUT_MS = 150
 const isPhysicalDeviceId = (deviceId: string): boolean =>
   Boolean(deviceId) && !PSEUDO_DEVICE_IDS.has(deviceId)
 
+/**
+ * Builds a set of output-device groupIds so an input sharing that group can be
+ * identified as a monitor source on Linux.  This works across PulseAudio native
+ * and PipeWire (via pipewire-pulse).
+ */
+const buildOutputGroupIds = (devices: MediaDeviceInfo[]): Set<string> => {
+  const groupIds = new Set<string>()
+  for (const device of devices) {
+    if (device.kind === 'audiooutput' && isPhysicalDeviceId(device.deviceId) && device.groupId) {
+      groupIds.add(device.groupId)
+    }
+  }
+  return groupIds
+}
+
+/** Returns true when a device label suggests a monitor source. */
+const hasMonitorLabel = (label: string): boolean => /\bmonitor\b/i.test(label)
+
 export default class AudioCaptureService {
   private readonly bindings = new Map<AudioSource, CaptureBinding>()
+  private currentPlatform: DesktopPlatform = 'win32'
 
   /** Lists microphone inputs and speaker outputs exposed by Chromium. */
-  public async listDevices(): Promise<AudioDevice[]> {
+  public async listDevices(platform?: DesktopPlatform): Promise<AudioDevice[]> {
+    const effectivePlatform = platform ?? this.currentPlatform
     const devices = await navigator.mediaDevices.enumerateDevices()
     const endpoints = new Map<string, AudioDevice>()
-    devices.forEach((device) => {
+
+    for (const device of devices) {
       if (
         (device.kind !== 'audioinput' && device.kind !== 'audiooutput') ||
         !isPhysicalDeviceId(device.deviceId)
       ) {
-        return
+        continue
       }
-      const kind = device.kind === 'audioinput' ? 'microphone' : 'speaker'
-      const endpointKey = `${kind}:${device.groupId || device.deviceId}`
-      if (!endpoints.has(endpointKey)) {
-        endpoints.set(endpointKey, { id: device.deviceId, label: device.label, kind })
+      const endpointKey = `${device.kind}:${device.groupId || device.deviceId}`
+
+      if (device.kind === 'audioinput') {
+        if (effectivePlatform === 'linux') {
+          if (hasMonitorLabel(device.label) || /\.monitor$/i.test(device.deviceId)) {
+            const speakerKey = `speaker:${device.groupId || device.deviceId}`
+            if (!endpoints.has(speakerKey)) {
+              endpoints.set(speakerKey, {
+                id: device.deviceId,
+                label: device.label,
+                kind: 'speaker',
+              })
+            }
+          } else {
+            if (!endpoints.has(endpointKey)) {
+              endpoints.set(endpointKey, {
+                id: device.deviceId,
+                label: device.label,
+                kind: 'microphone',
+              })
+            }
+          }
+        } else {
+          if (!endpoints.has(endpointKey)) {
+            endpoints.set(endpointKey, {
+              id: device.deviceId,
+              label: device.label,
+              kind: 'microphone',
+            })
+          }
+        }
+      } else {
+        if (effectivePlatform === 'linux') continue
+        if (!endpoints.has(endpointKey)) {
+          endpoints.set(endpointKey, { id: device.deviceId, label: device.label, kind: 'speaker' })
+        }
       }
-    })
+    }
+
     return [...endpoints.values()]
   }
 
   /** Starts every requested source and rolls back if any capture fails. */
   public async start(options: StartOptions): Promise<void> {
     if (this.bindings.size > 0) throw new Error('Audio capture is already active.')
+    this.currentPlatform = options.platform
     try {
       for (const source of options.sources) {
         const stream =
           source === 'microphone'
             ? await this.createMicrophoneStream(options.microphoneDeviceId)
-            : await this.createSpeakerStream()
+            : await this.createSpeakerStream(options.speakerDeviceId)
         await this.attachStream(source, stream, options)
       }
     } catch (error) {
@@ -108,8 +164,11 @@ export default class AudioCaptureService {
     })
   }
 
-  /** Requests Windows speaker loopback after validating the persisted output selection. */
-  private async createSpeakerStream(): Promise<MediaStream> {
+  /** Requests Windows speaker loopback or Linux monitor source capture based on platform. */
+  private async createSpeakerStream(deviceId: string): Promise<MediaStream> {
+    if (this.currentPlatform === 'linux') {
+      return this.createLinuxSpeakerStream(deviceId)
+    }
     const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
     stream.getVideoTracks().forEach((track) => {
       track.stop()
@@ -121,6 +180,66 @@ export default class AudioCaptureService {
       throw new Error('The selected speaker did not provide loopback audio.')
     }
     return stream
+  }
+
+  /** Captures system audio via a PulseAudio/PipeWire monitor source on Linux. */
+  private async createLinuxSpeakerStream(deviceId: string): Promise<MediaStream> {
+    const devices = await navigator.mediaDevices.enumerateDevices()
+    const monitorSources = this.findLinuxMonitorSources(devices)
+
+    if (isPhysicalDeviceId(deviceId)) {
+      const selected = monitorSources.find((device) => device.deviceId === deviceId)
+      if (selected) {
+        return navigator.mediaDevices.getUserMedia({
+          video: false,
+          audio: {
+            deviceId: { exact: selected.deviceId },
+            channelCount: 1,
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false,
+          },
+        })
+      }
+    }
+
+    const fallback = monitorSources[0]
+    if (!fallback) {
+      throw new Error(
+        'No monitor source found for speaker loopback. Ensure PulseAudio or PipeWire is running.',
+      )
+    }
+    return navigator.mediaDevices.getUserMedia({
+      video: false,
+      audio: {
+        deviceId: { exact: fallback.deviceId },
+        channelCount: 1,
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+      },
+    })
+  }
+
+  /**
+   * Finds monitor sources for actual capture: label first, then groupId
+   * matching as a fallback for PipeWire systems where labels are generic.
+   */
+  private findLinuxMonitorSources(devices: MediaDeviceInfo[]): MediaDeviceInfo[] {
+    const outputGroupIds = buildOutputGroupIds(devices)
+    const labelMatches: MediaDeviceInfo[] = []
+    const groupMatches: MediaDeviceInfo[] = []
+
+    for (const device of devices) {
+      if (device.kind !== 'audioinput' || !isPhysicalDeviceId(device.deviceId)) continue
+      if (hasMonitorLabel(device.label) || /\.monitor$/i.test(device.deviceId)) {
+        labelMatches.push(device)
+      } else if (device.groupId && outputGroupIds.has(device.groupId)) {
+        groupMatches.push(device)
+      }
+    }
+
+    return labelMatches.length > 0 ? labelMatches : groupMatches
   }
 
   /** Attaches a stream to an AudioWorklet and a silent sink that keeps processing alive. */
