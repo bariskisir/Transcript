@@ -758,11 +758,16 @@ export default class LocalModelService {
 
     const managed = await this.hasManagedMarker(modelId)
     const discovered = this.discovered.get(modelId)
-    if (!managed && !discovered) throw new Error('The Local model is not installed.')
+    const partial =
+      !managed && !discovered && (await directorySize(this.getManagedDirectory(modelId))) > 0
+    if (!managed && !discovered && !partial) {
+      throw new Error('The Local model is not installed or partially downloaded.')
+    }
 
-    const target = managed
-      ? requireContainedPath(this.managedRoot, this.getManagedDirectory(modelId))
-      : resolveDiscoveredDeletionTarget(discovered as DiscoveredModel, this.modelsRoot)
+    const target =
+      managed || partial
+        ? requireContainedPath(this.managedRoot, this.getManagedDirectory(modelId))
+        : resolveDiscoveredDeletionTarget(discovered as DiscoveredModel, this.modelsRoot)
     await rm(target, { recursive: true, force: true })
     await this.scanModelLocations()
     this.events.onModelsChanged(await this.getModels())
@@ -790,7 +795,7 @@ export default class LocalModelService {
       isDownloading: this.downloads.has(entry.id) || this.nativeDownloads.has(entry.id),
       partialBytes,
       origin: managed ? 'managed' : (shared?.origin ?? 'catalog'),
-      canDelete: managed || Boolean(shared),
+      canDelete: managed || Boolean(shared) || partialBytes > 0,
       isCustom: false,
     }
   }

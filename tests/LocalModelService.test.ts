@@ -75,6 +75,33 @@ describe('LocalModelService', () => {
     )
   })
 
+  it('offers deletion for a resumable partial download and removes its managed directory', async () => {
+    const modelId = 'Xenova/whisper-base'
+    const partialDirectory = join(
+      temporaryRoot,
+      'models',
+      'managed',
+      Buffer.from(modelId).toString('base64url'),
+    )
+    await mkdir(partialDirectory, { recursive: true })
+    await writeFile(join(partialDirectory, 'model.partial'), 'partial model data')
+
+    const service = createService()
+    await service.initialize()
+    const model = (await service.getModels()).find((candidate) => candidate.id === modelId)
+
+    expect(model).toMatchObject({
+      isDownloaded: false,
+      partialBytes: 18,
+      canDelete: true,
+    })
+
+    await service.delete(modelId)
+
+    await expect(stat(partialDirectory)).rejects.toThrow()
+    expect((await service.getModel(modelId))?.partialBytes).toBe(0)
+  })
+
   it('omits unsupported generation options for English-only Whisper models', () => {
     expect(supportsOnnxLanguageOptions('Xenova/whisper-base.en')).toBe(false)
     expect(supportsOnnxLanguageOptions('distil-whisper/distil-small.en')).toBe(false)
