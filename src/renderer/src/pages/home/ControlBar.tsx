@@ -7,6 +7,7 @@ import { Button, Select, Switch, Tooltip } from 'antd'
 import { Languages, Mic2, MonitorSpeaker, Radio, Square } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { ORDERED_OPENROUTER_TRANSCRIPTION_LANGUAGES } from '@shared/openrouter'
+import { LOCAL_TRANSCRIPTION_LANGUAGES } from '@shared/localTranscription'
 import { TRANSLATION_TARGET_LANGUAGES, type TranslationTargetLanguage } from '@shared/translation'
 import type { AppSettingsPatch } from '@shared/types'
 import type AudioCaptureService from '@renderer/audio/AudioCaptureService'
@@ -34,6 +35,7 @@ const ControlBar = ({
   const session = useAppSelector((state) => state.app.session.state)
   const levels = useAppSelector((state) => state.app.levels)
   const deepgramModels = useAppSelector((state) => state.app.deepgramModels)
+  const localModels = useAppSelector((state) => state.app.localModels)
   const [devices, setDevices] = useState<AudioDevice[]>([])
   const { t } = useTranslation()
   const { theme } = useTheme()
@@ -44,6 +46,8 @@ const ControlBar = ({
   const canStop = session === 'connecting' || recording
   const deepgramSettings = settings.transcriptionProviderSettings.deepgram
   const openRouterSettings = settings.transcriptionProviderSettings.openrouter
+  const localSettings = settings.transcriptionProviderSettings.local
+  const selectedLocalModel = localModels.find((model) => model.id === localSettings.modelId)
 
   useEffect(() => {
     const refresh = (): void => {
@@ -84,12 +88,18 @@ const ControlBar = ({
         ? (deepgramModels.find((model) => model.id === deepgramSettings.model)?.languages ?? [
             deepgramSettings.language,
           ])
-        : ORDERED_OPENROUTER_TRANSCRIPTION_LANGUAGES
+        : settings.transcriptionProvider === 'local'
+          ? (selectedLocalModel?.languages ?? LOCAL_TRANSCRIPTION_LANGUAGES)
+          : ORDERED_OPENROUTER_TRANSCRIPTION_LANGUAGES
+    const supportsAutomaticLanguage =
+      settings.transcriptionProvider === 'openrouter' ||
+      (settings.transcriptionProvider === 'local' &&
+        (selectedLocalModel?.supportsLanguageDetection ?? true))
     return [
-      ...(settings.transcriptionProvider === 'openrouter'
+      ...(supportsAutomaticLanguage
         ? [
             {
-              value: '',
+              value: settings.transcriptionProvider === 'local' ? 'auto' : '',
               searchText: t('settings.automaticLanguage'),
               label: t('settings.automaticLanguage'),
             },
@@ -106,13 +116,16 @@ const ControlBar = ({
     deepgramSettings.language,
     deepgramSettings.model,
     languageNames,
+    selectedLocalModel,
     settings.transcriptionProvider,
     t,
   ])
   const speechLanguage =
     settings.transcriptionProvider === 'deepgram'
       ? deepgramSettings.language
-      : openRouterSettings.language
+      : settings.transcriptionProvider === 'local'
+        ? localSettings.language
+        : openRouterSettings.language
 
   /** Formats one target language in the active interface locale without a technical suffix. */
   const formatTranslationLanguage = (code: string): string => languageNames.of(code) ?? code

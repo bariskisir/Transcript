@@ -75,6 +75,15 @@ describe('IpcChannel', () => {
     expect(channels).toContain('updates:install')
   })
 
+  it('includes local model management commands and events', () => {
+    expect(channels).toContain('local:models')
+    expect(channels).toContain('local:model-download')
+    expect(channels).toContain('local:model-delete')
+    expect(channels).toContain('local:model-select')
+    expect(channels).toContain('event:local-model-operation')
+    expect(channels).toContain('event:local-engine-state')
+  })
+
   it('includes the required error and update-state events', () => {
     expect(channels).toContain('event:error')
     expect(channels).toContain('event:update-state')

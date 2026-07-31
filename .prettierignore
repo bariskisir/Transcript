@@ -3,4 +3,4 @@ out
 release
 coverage
 package-lock.json
-
+src/shared/handyModelCatalog.json

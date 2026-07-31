@@ -17,7 +17,12 @@ import {
 } from '@shared/types'
 import type { OpenRouterSpeechModel } from '@shared/openrouter'
 import type { DeepgramSpeechModel } from '@shared/deepgram'
-import type { TranscriptionProvider } from '@shared/transcription'
+import type { RemoteTranscriptionProvider } from '@shared/transcription'
+import type {
+  LocalEngineStateEvent,
+  LocalModelInfo,
+  LocalModelOperationEvent,
+} from '@shared/localTranscription'
 
 export type AppPage = 'home' | 'settings'
 export type SettingsSection =
@@ -30,10 +35,13 @@ export interface AppState {
   settings: AppSettings
   platform: BootstrapPayload['platform']
   version: string
-  hasApiKeys: Record<TranscriptionProvider, boolean>
-  apiBalances: Record<TranscriptionProvider, ApiBalance[]>
+  hasApiKeys: Record<RemoteTranscriptionProvider, boolean>
+  apiBalances: Record<RemoteTranscriptionProvider, ApiBalance[]>
   deepgramModels: DeepgramSpeechModel[]
   openRouterModels: OpenRouterSpeechModel[]
+  localModels: LocalModelInfo[]
+  localModelOperations: Record<string, LocalModelOperationEvent>
+  localEngineState: LocalEngineStateEvent
   sessions: SessionSummary[]
   currentSession: SessionDocument | null
   session: SessionStateEvent
@@ -55,6 +63,9 @@ const initialState: AppState = {
   apiBalances: { deepgram: [], openrouter: [] },
   deepgramModels: [],
   openRouterModels: [],
+  localModels: [],
+  localModelOperations: {},
+  localEngineState: { state: 'unloaded' },
   sessions: [],
   currentSession: null,
   session: { state: 'idle' },
@@ -79,6 +90,8 @@ const appSlice = createSlice({
       state.hasApiKeys = action.payload.hasApiKeys
       state.deepgramModels = action.payload.deepgramModels
       state.openRouterModels = action.payload.openRouterModels
+      state.localModels = action.payload.localModels
+      state.localEngineState = action.payload.localEngineState
       state.sessions = action.payload.sessions
       state.currentSession = action.payload.currentSession
     },
@@ -98,16 +111,32 @@ const appSlice = createSlice({
     /** Updates whether one transcription provider credential is available. */
     setHasApiKey(
       state,
-      action: PayloadAction<{ provider: TranscriptionProvider; available: boolean }>,
+      action: PayloadAction<{ provider: RemoteTranscriptionProvider; available: boolean }>,
     ) {
       state.hasApiKeys[action.payload.provider] = action.payload.available
     },
     /** Replaces optional account balance data for one transcription provider. */
     setApiBalance(
       state,
-      action: PayloadAction<{ provider: TranscriptionProvider; balance: ApiBalance[] }>,
+      action: PayloadAction<{ provider: RemoteTranscriptionProvider; balance: ApiBalance[] }>,
     ) {
       state.apiBalances[action.payload.provider] = action.payload.balance
+    },
+    /** Replaces local catalog state after a scan, download, or deletion. */
+    setLocalModels(state, action: PayloadAction<LocalModelInfo[]>) {
+      state.localModels = action.payload
+    },
+    /** Retains the latest progress state for each independently managed model. */
+    setLocalModelOperation(state, action: PayloadAction<LocalModelOperationEvent>) {
+      if (action.payload.phase === 'ready' || action.payload.phase === 'cancelled') {
+        delete state.localModelOperations[action.payload.modelId]
+        return
+      }
+      state.localModelOperations[action.payload.modelId] = action.payload
+    },
+    /** Applies worker model loading and unloading state. */
+    setLocalEngineState(state, action: PayloadAction<LocalEngineStateEvent>) {
+      state.localEngineState = action.payload
     },
     /** Replaces session summaries from local storage. */
     setSessions(state, action: PayloadAction<SessionSummary[]>) {
@@ -204,6 +233,9 @@ export const {
   setAudioLevel,
   setCurrentSession,
   setHasApiKey,
+  setLocalEngineState,
+  setLocalModelOperation,
+  setLocalModels,
   setSessions,
   setPage,
   setSessionState,

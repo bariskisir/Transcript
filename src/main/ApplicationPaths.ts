@@ -10,6 +10,7 @@ export interface ApplicationPaths {
   applicationDataRoot: string
   dataRoot: string
   logsRoot: string
+  modelsRoot: string
   runtimeRoot: string
   sessionRoot: string
 }
@@ -19,12 +20,15 @@ export const configureApplicationPaths = (): ApplicationPaths => {
   const applicationDataRoot = join(app.getPath('appData'), 'Transcript')
   const dataRoot = join(applicationDataRoot, 'Data')
   const logsRoot = join(applicationDataRoot, 'Logs')
+  const modelsRoot = join(dataRoot, 'Models')
   const runtimeRoot = join(applicationDataRoot, 'Runtime')
   const sessionRoot = join(runtimeRoot, 'Session')
 
-  ;[applicationDataRoot, dataRoot, logsRoot, runtimeRoot, sessionRoot].forEach((directory) => {
-    mkdirSync(directory, { recursive: true })
-  })
+  ;[applicationDataRoot, dataRoot, logsRoot, modelsRoot, runtimeRoot, sessionRoot].forEach(
+    (directory) => {
+      mkdirSync(directory, { recursive: true })
+    },
+  )
   app.setPath('userData', runtimeRoot)
   app.setPath('sessionData', sessionRoot)
   app.setAppLogsPath(logsRoot)
@@ -33,6 +37,7 @@ export const configureApplicationPaths = (): ApplicationPaths => {
     applicationDataRoot,
     dataRoot,
     logsRoot,
+    modelsRoot,
     runtimeRoot,
     sessionRoot,
   }

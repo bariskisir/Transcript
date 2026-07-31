@@ -3,8 +3,31 @@
  */
 
 import { useEffect, useMemo, useState } from 'react'
-import { Button, Input, InputNumber, Select, Space, Switch, Tag } from 'antd'
-import { CircleCheck, ExternalLink, KeyRound, Save, Trash2 } from 'lucide-react'
+import {
+  App as AntdApp,
+  Button,
+  Empty,
+  Input,
+  InputNumber,
+  Progress,
+  Select,
+  Space,
+  Switch,
+  Tag,
+} from 'antd'
+import {
+  CircleCheck,
+  Cpu,
+  Download,
+  ExternalLink,
+  FolderOpen,
+  KeyRound,
+  RefreshCw,
+  Save,
+  Trash2,
+  Unplug,
+  X,
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import {
   DEEPGRAM_DIARIZATION_MODES,
@@ -16,13 +39,16 @@ import {
   TRANSCRIPTION_PROVIDERS,
   type DeepgramTranscriptionSettingsPatch,
   type OpenRouterTranscriptionSettingsPatch,
+  type LocalTranscriptionSettingsPatch,
   type RestTranscriptionSpeed,
   type TranscriptionProvider,
 } from '@shared/transcription'
 import { OPENROUTER_KEYS_URL, ORDERED_OPENROUTER_TRANSCRIPTION_LANGUAGES } from '@shared/openrouter'
+import { LOCAL_TRANSCRIPTION_LANGUAGES } from '@shared/localTranscription'
 import { useDesktopActions } from '@renderer/hooks/useDesktopActions'
 import { useSettingsActions } from '@renderer/hooks/useSettingsActions'
-import { useAppSelector } from '@renderer/store'
+import { useAppDispatch, useAppSelector } from '@renderer/store'
+import { setSettings } from '@renderer/store/appSlice'
 import { useTheme } from '@renderer/context/ThemeProvider'
 import SettingLabel from '../components/SettingLabel'
 import styles from '../SettingsPage.module.scss'
@@ -710,6 +736,351 @@ const OpenRouterSettingsSection = (): React.JSX.Element => {
   )
 }
 
+/** Displays local Whisper model management, load state, and language selection. */
+const LocalSettingsSection = (): React.JSX.Element => {
+  const settings = useAppSelector((state) => state.app.settings)
+  const localSettings = settings.transcriptionProviderSettings.local
+  const models = useAppSelector((state) => state.app.localModels)
+  const operations = useAppSelector((state) => state.app.localModelOperations)
+  const engine = useAppSelector((state) => state.app.localEngineState)
+  const session = useAppSelector((state) => state.app.session.state)
+  const dispatch = useAppDispatch()
+  const settingsActions = useSettingsActions()
+  const { message, modal } = AntdApp.useApp()
+  const { t } = useTranslation()
+  const [modelSearch, setModelSearch] = useState('')
+  const [languageFilter, setLanguageFilter] = useState('all')
+  const [ejectingModel, setEjectingModel] = useState(false)
+  const languageNames = useMemo(
+    () => new Intl.DisplayNames([settings.uiLanguage, 'en'], { type: 'language' }),
+    [settings.uiLanguage],
+  )
+  const downloadedModels = useMemo(() => models.filter((model) => model.isDownloaded), [models])
+  const selectedModel = models.find((model) => model.id === localSettings.modelId)
+  const loadingSelected = engine.state === 'loading'
+  const modelLoaded =
+    engine.state === 'ready' && engine.modelId === localSettings.modelId && Boolean(selectedModel)
+  const displayedModelId = loadingSelected ? (engine.modelId ?? '') : localSettings.modelId
+
+  const modelOptions = useMemo(
+    () =>
+      downloadedModels.map((model) => ({
+        value: model.id,
+        searchText: `${model.name} ${model.id}`,
+        label: (
+          <span className={styles.modelOption}>
+            <span className={styles.modelOptionName}>{model.name}</span>
+            <span className={styles.modelOptionPrice}>
+              {model.origin === 'huggingface' ? t('settings.localSharedCache') : model.filename}
+            </span>
+          </span>
+        ),
+      })),
+    [downloadedModels, t],
+  )
+  const availableLanguages = selectedModel?.languages ?? LOCAL_TRANSCRIPTION_LANGUAGES
+  const languageOptions = useMemo(
+    () => [
+      ...((selectedModel?.supportsLanguageDetection ?? true)
+        ? [{ value: 'auto', label: t('settings.automaticLanguage') }]
+        : []),
+      ...availableLanguages.map((language) => ({
+        value: language,
+        label: `${languageNames.of(language) ?? language} (${language})`,
+      })),
+    ],
+    [availableLanguages, languageNames, selectedModel?.supportsLanguageDetection, t],
+  )
+  const catalogLanguageOptions = useMemo(
+    () =>
+      [...new Set(models.flatMap((model) => model.languages))]
+        .sort((left, right) => {
+          const leftName = languageNames.of(left) ?? left
+          const rightName = languageNames.of(right) ?? right
+          return leftName.localeCompare(rightName, settings.uiLanguage)
+        })
+        .map((language) => ({
+          value: language,
+          searchText: `${languageNames.of(language) ?? language} ${language}`,
+          label: `${languageNames.of(language) ?? language} (${language})`,
+        })),
+    [languageNames, models, settings.uiLanguage],
+  )
+  const filteredModels = useMemo(() => {
+    const query = modelSearch.trim().toLocaleLowerCase(settings.uiLanguage)
+    return models.filter((model) => {
+      const matchesName =
+        !query ||
+        `${model.name} ${model.id} ${model.family}`
+          .toLocaleLowerCase(settings.uiLanguage)
+          .includes(query)
+      const matchesLanguage = languageFilter === 'all' || model.languages.includes(languageFilter)
+      return matchesName && matchesLanguage
+    })
+  }, [languageFilter, modelSearch, models, settings.uiLanguage])
+
+  /** Persists a partial Local setting through the serialized settings queue. */
+  const updateSettings = async (patch: LocalTranscriptionSettingsPatch): Promise<void> => {
+    await settingsActions.saveSettings({ transcriptionProviderSettings: { local: patch } })
+  }
+
+  /** Loads a complete model before committing it as the selected Local model. */
+  const handleSelectModel = async (modelId: string): Promise<void> => {
+    try {
+      dispatch(setSettings(await window.app.selectLocalModel(modelId)))
+    } catch {
+      void message.error(t('settings.localModelLoadFailed'))
+    }
+  }
+
+  /** Releases the active engine model and clears the persisted model selection. */
+  const handleEjectModel = async (): Promise<void> => {
+    setEjectingModel(true)
+    try {
+      dispatch(setSettings(await window.app.ejectLocalModel()))
+    } catch {
+      void message.error(t('settings.localModelEjectFailed'))
+    } finally {
+      setEjectingModel(false)
+    }
+  }
+
+  /** Starts a managed download while progress arrives through the event bridge. */
+  const handleDownload = (modelId: string): void => {
+    void window.app.downloadLocalModel(modelId).catch(() => undefined)
+  }
+
+  /** Confirms and removes only an application-managed model copy. */
+  const handleDelete = (modelId: string): void => {
+    modal.confirm({
+      title: t('settings.localDeleteModelTitle'),
+      content: t('settings.localDeleteModelDescription'),
+      okText: t('common.delete'),
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        dispatch(setSettings(await window.app.deleteLocalModel(modelId)))
+      },
+    })
+  }
+
+  return (
+    <>
+      <h2 className={styles.groupTitle}>{t('settings.recognition')}</h2>
+      <section className={styles.settingGroup}>
+        <div className={styles.settingRow}>
+          <SettingLabel
+            title={t('settings.model')}
+            description={t('settings.localSelectedModelDescription')}
+          />
+          <div className={styles.settingControl}>
+            <Select
+              className={`${styles.wideControl ?? ''} ${styles.modelSelect ?? ''}`}
+              value={
+                loadingSelected
+                  ? displayedModelId
+                  : selectedModel?.isDownloaded
+                    ? displayedModelId
+                    : null
+              }
+              placeholder={t('settings.localSelectModel')}
+              loading={loadingSelected}
+              disabled={session !== 'idle' || downloadedModels.length === 0}
+              showSearch
+              optionFilterProp="searchText"
+              options={modelOptions}
+              onChange={(modelId: string) => void handleSelectModel(modelId)}
+            />
+            {modelLoaded && (
+              <Button
+                icon={<Unplug size={14} />}
+                loading={ejectingModel}
+                disabled={session !== 'idle'}
+                onClick={() => void handleEjectModel()}
+              >
+                {t('settings.localEjectModel')}
+              </Button>
+            )}
+          </div>
+        </div>
+        {loadingSelected && (
+          <div className={styles.localLoadProgress}>
+            <span>{t('settings.localLoadingModel')}</span>
+            <Progress percent={100} showInfo={false} status="active" size="small" />
+          </div>
+        )}
+        <div className={styles.settingRow}>
+          <SettingLabel
+            title={t('settings.speechLanguage')}
+            description={t('settings.localLanguageDescription')}
+          />
+          <div className={styles.settingControl}>
+            <Select
+              className={styles.wideControl ?? ''}
+              value={localSettings.language}
+              showSearch
+              options={languageOptions}
+              onChange={(language: string) => void updateSettings({ language })}
+            />
+          </div>
+        </div>
+      </section>
+
+      <div className={styles.localCatalogHeader}>
+        <h2 className={styles.groupTitle}>{t('settings.localModels')}</h2>
+        <Space size={6}>
+          <Button
+            size="small"
+            icon={<RefreshCw size={13} />}
+            onClick={() => void window.app.rescanLocalModels()}
+          >
+            {t('settings.localScan')}
+          </Button>
+          <Button
+            size="small"
+            icon={<FolderOpen size={13} />}
+            onClick={() => void window.app.openLocalModelsDirectory()}
+          >
+            {t('settings.localOpenFolder')}
+          </Button>
+        </Space>
+      </div>
+      <div className={`${styles.apiCreditNotice} ${styles.localHardwareNotice}`}>
+        <Cpu size={15} />
+        <span>{t('settings.localHardwareNotice')}</span>
+      </div>
+      <div className={styles.localCatalogFilters}>
+        <Input
+          allowClear
+          value={modelSearch}
+          placeholder={t('settings.localSearchModels')}
+          onChange={(event) => setModelSearch(event.target.value)}
+        />
+        <Select
+          value={languageFilter}
+          showSearch
+          optionFilterProp="searchText"
+          options={[
+            {
+              value: 'all',
+              searchText: t('settings.localAllLanguages'),
+              label: t('settings.localAllLanguages'),
+            },
+            ...catalogLanguageOptions,
+          ]}
+          onChange={(language: string) => setLanguageFilter(language)}
+        />
+      </div>
+      <section className={styles.localModelGrid}>
+        {filteredModels.map((model) => {
+          const operation = operations[model.id]
+          const downloading =
+            !model.isDownloaded && (operation?.phase === 'downloading' || model.isDownloading)
+          const verifying = !model.isDownloaded && operation?.phase === 'verifying'
+          const percent = Math.max(0, Math.min(100, operation?.percentage ?? 0))
+          return (
+            <article className={styles.localModelCard} key={model.id}>
+              <div className={styles.localModelCardHeader}>
+                <div>
+                  <strong>{model.name}</strong>
+                  <span>{model.id}</span>
+                </div>
+                {model.isRecommended && <Tag color="green">{t('settings.recommended')}</Tag>}
+              </div>
+              <p>{model.description}</p>
+              <div className={styles.localModelMeta}>
+                <Tag color="blue">{model.family}</Tag>
+                {model.sizeBytes > 0 && <Tag>{formatBytes(model.sizeBytes)}</Tag>}
+                <Tag>{model.license}</Tag>
+                {model.isDownloaded && (
+                  <Tag color="success" icon={<CircleCheck size={11} />}>
+                    {model.origin === 'huggingface'
+                      ? t('settings.localSharedCache')
+                      : t('settings.localDownloaded')}
+                  </Tag>
+                )}
+              </div>
+              {(downloading || verifying) && (
+                <Progress
+                  percent={verifying ? 100 : Math.round(percent)}
+                  status="active"
+                  size="small"
+                  format={() =>
+                    verifying ? t('settings.localVerifying') : `${Math.round(percent)}%`
+                  }
+                />
+              )}
+              <div className={styles.localModelActions}>
+                {downloading || verifying ? (
+                  <Button
+                    size="small"
+                    icon={<X size={13} />}
+                    onClick={() => void window.app.cancelLocalModelDownload(model.id)}
+                  >
+                    {t('common.cancel')}
+                  </Button>
+                ) : !model.isDownloaded ? (
+                  <Button
+                    type="primary"
+                    size="small"
+                    icon={<Download size={13} />}
+                    onClick={() => handleDownload(model.id)}
+                  >
+                    {model.partialBytes > 0
+                      ? t('settings.localResumeDownload')
+                      : t('settings.localDownload')}
+                  </Button>
+                ) : localSettings.modelId === model.id && engine.state === 'ready' ? (
+                  <Button
+                    size="small"
+                    icon={<Unplug size={13} />}
+                    loading={ejectingModel}
+                    disabled={session !== 'idle'}
+                    onClick={() => void handleEjectModel()}
+                  >
+                    {t('settings.localEjectModel')}
+                  </Button>
+                ) : (
+                  <Button
+                    size="small"
+                    disabled={session !== 'idle'}
+                    onClick={() => void handleSelectModel(model.id)}
+                  >
+                    {t('settings.localUseModel')}
+                  </Button>
+                )}
+                {model.canDelete && (
+                  <Button
+                    danger
+                    size="small"
+                    icon={<Trash2 size={13} />}
+                    disabled={session !== 'idle'}
+                    onClick={() => handleDelete(model.id)}
+                  >
+                    {t('common.delete')}
+                  </Button>
+                )}
+              </div>
+            </article>
+          )
+        })}
+        {filteredModels.length === 0 && (
+          <Empty
+            className={styles.localCatalogEmpty ?? ''}
+            description={t('settings.localNoModels')}
+          />
+        )}
+      </section>
+    </>
+  )
+}
+
+/** Formats model sizes with compact binary units. */
+const formatBytes = (bytes: number): string => {
+  if (bytes < 1_024 ** 2) return `${Math.round(bytes / 1_024)} KB`
+  if (bytes < 1_024 ** 3) return `${Math.round(bytes / 1_024 ** 2)} MB`
+  return `${(bytes / 1_024 ** 3).toFixed(1)} GB`
+}
+
 /** Displays provider selection and renders only the selected provider's independent settings. */
 const TranscriptionSettingsSection = (): React.JSX.Element => {
   const settings = useAppSelector((state) => state.app.settings)
@@ -746,6 +1117,7 @@ const TranscriptionSettingsSection = (): React.JSX.Element => {
 
       {settings.transcriptionProvider === 'deepgram' && <DeepgramSettingsSection />}
       {settings.transcriptionProvider === 'openrouter' && <OpenRouterSettingsSection />}
+      {settings.transcriptionProvider === 'local' && <LocalSettingsSection />}
     </div>
   )
 }

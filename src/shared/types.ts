@@ -4,13 +4,20 @@
 
 import {
   DEFAULT_DEEPGRAM_TRANSCRIPTION_SETTINGS,
+  DEFAULT_LOCAL_TRANSCRIPTION_SETTINGS,
   DEFAULT_OPENROUTER_TRANSCRIPTION_SETTINGS,
+  type RemoteTranscriptionProvider,
   type TranscriptionProvider,
   type TranscriptionProviderSettings,
   type TranscriptionProviderSettingsPatch,
 } from './transcription'
 import type { OpenRouterSpeechModel } from './openrouter'
 import type { DeepgramSpeechModel } from './deepgram'
+import type {
+  LocalEngineStateEvent,
+  LocalModelInfo,
+  LocalModelOperationEvent,
+} from './localTranscription'
 import type { TranslationProvider, TranslationTargetLanguage } from './translation'
 
 export const AUDIO_SOURCES = ['microphone', 'speaker'] as const
@@ -73,6 +80,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   transcriptionProviderSettings: {
     deepgram: DEFAULT_DEEPGRAM_TRANSCRIPTION_SETTINGS,
     openrouter: DEFAULT_OPENROUTER_TRANSCRIPTION_SETTINGS,
+    local: DEFAULT_LOCAL_TRANSCRIPTION_SETTINGS,
   },
   translationProvider: 'google',
   translationEnabled: false,
@@ -138,9 +146,11 @@ export interface BootstrapPayload {
   settings: AppSettings
   sessions: SessionSummary[]
   currentSession: SessionDocument
-  hasApiKeys: Record<TranscriptionProvider, boolean>
+  hasApiKeys: Record<RemoteTranscriptionProvider, boolean>
   deepgramModels: DeepgramSpeechModel[]
   openRouterModels: OpenRouterSpeechModel[]
+  localModels: LocalModelInfo[]
+  localEngineState: LocalEngineStateEvent
   platform: DesktopPlatform
   version: string
 }
@@ -216,17 +226,33 @@ export interface TranscriptApi {
   /** Atomically merges and persists validated application settings fields. */
   saveSettings(patch: AppSettingsPatch): Promise<AppSettings>
   /** Validates, encrypts, and persists one provider key, returning supported balance data. */
-  saveApiKey(provider: TranscriptionProvider, apiKey: string): Promise<ApiBalance[]>
+  saveApiKey(provider: RemoteTranscriptionProvider, apiKey: string): Promise<ApiBalance[]>
   /** Decrypts the selected provider key only when explicitly requested by settings. */
-  getApiKey(provider: TranscriptionProvider): Promise<string | null>
+  getApiKey(provider: RemoteTranscriptionProvider): Promise<string | null>
   /** Removes one provider's encrypted API key. */
-  deleteApiKey(provider: TranscriptionProvider): Promise<void>
+  deleteApiKey(provider: RemoteTranscriptionProvider): Promise<void>
   /** Retrieves optional balance data for one encrypted provider key. */
-  getApiBalance(provider: TranscriptionProvider): Promise<ApiBalance[]>
+  getApiBalance(provider: RemoteTranscriptionProvider): Promise<ApiBalance[]>
   /** Retrieves unauthenticated public Deepgram streaming STT models. */
   getDeepgramModels(): Promise<DeepgramSpeechModel[]>
   /** Retrieves duration-priced OpenRouter speech models ordered by hourly cost. */
   getOpenRouterModels(): Promise<OpenRouterSpeechModel[]>
+  /** Lists the bundled catalog together with managed and shared-cache Whisper models. */
+  getLocalModels(): Promise<LocalModelInfo[]>
+  /** Re-scans managed and shared Hugging Face model locations. */
+  rescanLocalModels(): Promise<LocalModelInfo[]>
+  /** Downloads and verifies one catalog model without selecting it. */
+  downloadLocalModel(modelId: string): Promise<void>
+  /** Cancels one active model download while retaining its resumable partial file. */
+  cancelLocalModelDownload(modelId: string): Promise<void>
+  /** Deletes one application-managed model and clears an active selection when necessary. */
+  deleteLocalModel(modelId: string): Promise<AppSettings>
+  /** Loads one downloaded model and persists it as the selected Local model. */
+  selectLocalModel(modelId: string): Promise<AppSettings>
+  /** Releases the loaded Local model and clears its persisted selection. */
+  ejectLocalModel(): Promise<AppSettings>
+  /** Opens the application-owned local Models directory. */
+  openLocalModelsDirectory(): Promise<void>
   /** Starts a new source-separated transcription session. */
   startSession(request: StartSessionRequest): Promise<StartSessionResult>
   /** Flushes and stops the active transcription session. */
@@ -289,6 +315,12 @@ export interface TranscriptApi {
   onError(listener: (event: AppErrorEvent) => void): () => void
   /** Subscribes to updater lifecycle events. */
   onUpdateState(listener: (event: UpdateStateEvent) => void): () => void
+  /** Subscribes to local model download and verification progress. */
+  onLocalModelOperation(listener: (event: LocalModelOperationEvent) => void): () => void
+  /** Subscribes to worker-hosted model load and unload state changes. */
+  onLocalEngineState(listener: (event: LocalEngineStateEvent) => void): () => void
+  /** Subscribes to catalog availability changes after download, deletion, or scan. */
+  onLocalModelsChanged(listener: (models: LocalModelInfo[]) => void): () => void
   /** Subscribes to native maximize and restore state changes. */
   onWindowMaximizedChange(listener: (maximized: boolean) => void): () => void
   /** Subscribes to settings navigation requested from native desktop UI. */

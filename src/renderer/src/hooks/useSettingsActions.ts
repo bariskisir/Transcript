@@ -6,7 +6,7 @@ import { useCallback } from 'react'
 import { App as AntdApp } from 'antd'
 import { useTranslation } from 'react-i18next'
 import type { AppSettingsPatch } from '@shared/types'
-import type { TranscriptionProvider } from '@shared/transcription'
+import type { RemoteTranscriptionProvider } from '@shared/transcription'
 import i18n from '@renderer/i18n'
 import { createLogger } from '@renderer/services/LoggerService'
 import SettingsPersistenceQueue from '@renderer/services/SettingsPersistenceQueue'
@@ -59,7 +59,7 @@ export const useSettingsActions = () => {
 
   /** Verifies and saves one transcription provider API key. */
   const saveApiKey = useCallback(
-    async (provider: TranscriptionProvider, apiKey: string): Promise<boolean> => {
+    async (provider: RemoteTranscriptionProvider, apiKey: string): Promise<boolean> => {
       try {
         const balance = await window.app.saveApiKey(provider, apiKey)
         dispatch(setHasApiKey({ provider, available: true }))
@@ -77,7 +77,7 @@ export const useSettingsActions = () => {
 
   /** Removes one encrypted provider key and clears its credential state. */
   const deleteApiKey = useCallback(
-    async (provider: TranscriptionProvider): Promise<boolean> => {
+    async (provider: RemoteTranscriptionProvider): Promise<boolean> => {
       try {
         await window.app.deleteApiKey(provider)
         dispatch(setHasApiKey({ provider, available: false }))
@@ -95,7 +95,7 @@ export const useSettingsActions = () => {
 
   /** Refreshes optional account balance data without surfacing unsupported accounts. */
   const refreshApiBalance = useCallback(
-    async (provider: TranscriptionProvider): Promise<void> => {
+    async (provider: RemoteTranscriptionProvider): Promise<void> => {
       try {
         dispatch(setApiBalance({ provider, balance: await window.app.getApiBalance(provider) }))
       } catch (error) {

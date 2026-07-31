@@ -11,6 +11,7 @@ import reducer, {
   setSettingsSection,
   setHasApiKey,
   setApiBalance,
+  setLocalModelOperation,
   setSessions,
   addSessionSummary,
   replaceSessionSummary,
@@ -64,6 +65,8 @@ function makeBootstrapPayload(overrides: Partial<BootstrapPayload> = {}): Bootst
     hasApiKeys: { deepgram: false, openrouter: false },
     deepgramModels: [],
     openRouterModels: [],
+    localModels: [],
+    localEngineState: { state: 'unloaded' },
     platform: 'win32',
     version: '1.0.0',
     ...overrides,
@@ -250,6 +253,22 @@ describe('appSlice', () => {
       const balance: ApiBalance[] = [{ amount: 50, units: 'USD' }]
       const state = reducer(undefined, setApiBalance({ provider: 'openrouter', balance }))
       expect(state.apiBalances.openrouter).toEqual(balance)
+    })
+  })
+
+  describe('local model operations', () => {
+    it('retains active progress and clears terminal download state', () => {
+      const downloading = reducer(
+        undefined,
+        setLocalModelOperation({ modelId: 'local/model', phase: 'downloading', percentage: 80 }),
+      )
+      expect(downloading.localModelOperations['local/model']?.percentage).toBe(80)
+
+      const ready = reducer(
+        downloading,
+        setLocalModelOperation({ modelId: 'local/model', phase: 'ready', percentage: 100 }),
+      )
+      expect(ready.localModelOperations['local/model']).toBeUndefined()
     })
   })
 

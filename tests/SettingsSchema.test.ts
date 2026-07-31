@@ -432,4 +432,20 @@ describe('settingsPatchSchema', () => {
     })
     expect(result.success).toBe(false)
   })
+
+  it('accepts a Local model and automatic-language patch', () => {
+    const result = settingsPatchSchema.safeParse({
+      transcriptionProviderSettings: {
+        local: { modelId: 'Xenova/whisper-base', language: 'auto' },
+      },
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('rejects an empty Local language', () => {
+    const result = settingsPatchSchema.safeParse({
+      transcriptionProviderSettings: { local: { language: '' } },
+    })
+    expect(result.success).toBe(false)
+  })
 })

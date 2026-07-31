@@ -5,6 +5,11 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import { IpcChannel } from '@shared/IpcChannel'
 import type {
+  LocalEngineStateEvent,
+  LocalModelInfo,
+  LocalModelOperationEvent,
+} from '@shared/localTranscription'
+import type {
   AppErrorEvent,
   SessionStateEvent,
   TranscriptApi,
@@ -38,6 +43,23 @@ const api: TranscriptApi = {
   getDeepgramModels: () => ipcRenderer.invoke(IpcChannel.DeepgramModels),
   /** Retrieves duration-priced OpenRouter speech models. */
   getOpenRouterModels: () => ipcRenderer.invoke(IpcChannel.OpenRouterModels),
+  /** Retrieves the offline catalog and currently discovered Whisper models. */
+  getLocalModels: () => ipcRenderer.invoke(IpcChannel.LocalModels),
+  /** Re-scans the managed Models directory and shared Hugging Face cache. */
+  rescanLocalModels: () => ipcRenderer.invoke(IpcChannel.LocalModelsRescan),
+  /** Downloads one catalog model without changing the active model. */
+  downloadLocalModel: (modelId) => ipcRenderer.invoke(IpcChannel.LocalModelDownload, modelId),
+  /** Cancels one resumable local-model download. */
+  cancelLocalModelDownload: (modelId) =>
+    ipcRenderer.invoke(IpcChannel.LocalModelDownloadCancel, modelId),
+  /** Deletes one application-managed local model. */
+  deleteLocalModel: (modelId) => ipcRenderer.invoke(IpcChannel.LocalModelDelete, modelId),
+  /** Loads and persists one downloaded local model. */
+  selectLocalModel: (modelId) => ipcRenderer.invoke(IpcChannel.LocalModelSelect, modelId),
+  /** Releases the loaded local model and clears its persisted selection. */
+  ejectLocalModel: () => ipcRenderer.invoke(IpcChannel.LocalModelEject),
+  /** Opens the application-managed local model directory. */
+  openLocalModelsDirectory: () => ipcRenderer.invoke(IpcChannel.LocalModelsOpenDirectory),
   /** Opens one transcription pipeline for every enabled audio source. */
   startSession: (request) => ipcRenderer.invoke(IpcChannel.SessionStart, request),
   /** Flushes and closes the active transcription session. */
@@ -101,6 +123,15 @@ const api: TranscriptApi = {
   onError: (listener) => subscribe<AppErrorEvent>(IpcChannel.AppError, listener),
   /** Subscribes to updater lifecycle progress. */
   onUpdateState: (listener) => subscribe<UpdateStateEvent>(IpcChannel.UpdateState, listener),
+  /** Subscribes to local download and verification progress. */
+  onLocalModelOperation: (listener) =>
+    subscribe<LocalModelOperationEvent>(IpcChannel.LocalModelOperation, listener),
+  /** Subscribes to local worker engine lifecycle changes. */
+  onLocalEngineState: (listener) =>
+    subscribe<LocalEngineStateEvent>(IpcChannel.LocalEngineState, listener),
+  /** Subscribes to refreshed local model lists. */
+  onLocalModelsChanged: (listener) =>
+    subscribe<LocalModelInfo[]>(IpcChannel.LocalModelsChanged, listener),
   /** Subscribes to maximize and restore state changes. */
   onWindowMaximizedChange: (listener) =>
     subscribe<boolean>(IpcChannel.WindowMaximizedChanged, listener),

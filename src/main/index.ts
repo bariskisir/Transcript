@@ -18,6 +18,8 @@ import OpenRouterService from './services/OpenRouterService'
 import BingTranslateService from './services/BingTranslateService'
 import GoogleTranslateService from './services/GoogleTranslateService'
 import LoggerService from './services/LoggerService'
+import LocalModelService from './services/LocalModelService'
+import LocalTranscriptionService from './services/LocalTranscriptionService'
 
 import StorageService from './services/StorageService'
 import TranscriptService from './services/TranscriptService'
@@ -29,6 +31,7 @@ const windowService = new WindowService()
 const applicationPaths = configureApplicationPaths()
 const hasSingleInstanceLock = app.requestSingleInstanceLock()
 let transcriptService: TranscriptService | null = null
+let localModelService: LocalModelService | null = null
 let loggerService: LoggerService | null = null
 let trayService: TrayService | null = null
 
@@ -57,6 +60,21 @@ const openApplicationWindow = async (): Promise<void> => {
   )
   const updater = new AppUpdater(logger)
   const window = await windowService.createWindow(logger)
+  const localModels = new LocalModelService(
+    applicationPaths.modelsRoot,
+    {
+      onOperation: (event) =>
+        windowService.getMainWindow()?.webContents.send(IpcChannel.LocalModelOperation, event),
+      onEngineState: (event) =>
+        windowService.getMainWindow()?.webContents.send(IpcChannel.LocalEngineState, event),
+      onModelsChanged: (models) =>
+        windowService.getMainWindow()?.webContents.send(IpcChannel.LocalModelsChanged, models),
+    },
+    logger,
+  )
+  await localModels.initialize()
+  localModelService = localModels
+  const localTranscription = new LocalTranscriptionService(localModels, logger)
   trayService?.dispose()
   const tray = new TrayService(window, settings, logger)
   trayService = tray
@@ -66,6 +84,7 @@ const openApplicationWindow = async (): Promise<void> => {
     credentials,
     deepgram,
     openRouter,
+    localTranscription,
     translator,
     {
       onState: (event) =>
@@ -91,6 +110,7 @@ const openApplicationWindow = async (): Promise<void> => {
     event.preventDefault()
     void activeTranscriptService
       .stop()
+      .then(() => localModels.unload())
       .catch((error: unknown) => {
         logger.error('Application', 'Recording cleanup failed while closing.', error)
       })
@@ -106,11 +126,31 @@ const openApplicationWindow = async (): Promise<void> => {
     deepgramCatalog,
     openRouterAccount,
     openRouterCatalog,
+    localModels,
     transcript: transcriptService,
     tray,
     updater,
     logger,
   })
+
+  const startupLocalModelId = settings.transcriptionProviderSettings.local.modelId
+  if (settings.transcriptionProvider === 'local' && startupLocalModelId) {
+    const startupModel = await localModels.getModel(startupLocalModelId)
+    if (startupModel?.isDownloaded) {
+      try {
+        await localModels.select(startupLocalModelId)
+        logger.info('LocalModel', 'Selected Local model loaded at startup.', {
+          modelId: startupLocalModelId,
+        })
+      } catch (error) {
+        logger.error('LocalModel', 'Selected Local model could not be loaded at startup.', error)
+      }
+    } else {
+      logger.warn('LocalModel', 'Selected startup model is not available on disk.', {
+        modelId: startupLocalModelId,
+      })
+    }
+  }
 
   logger.info('Application', 'Transcript desktop started.', {
     version: app.getVersion(),
@@ -164,9 +204,12 @@ if (!hasSingleInstanceLock) {
 
 app.on('before-quit', () => {
   trayService?.prepareToQuit()
-  void transcriptService?.stop().catch((error: unknown) => {
-    loggerService?.error('Application', 'Recording cleanup failed before quit.', error)
-  })
+  void transcriptService
+    ?.stop()
+    .then(() => localModelService?.unload())
+    .catch((error: unknown) => {
+      loggerService?.error('Application', 'Recording cleanup failed before quit.', error)
+    })
 })
 
 app.on('window-all-closed', () => {

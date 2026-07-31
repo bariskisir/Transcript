@@ -34,9 +34,16 @@ export const useRecordingActions = () => {
   const dispatch = useAppDispatch()
   const settings = useAppSelector((state) => state.app.settings)
   const platform = useAppSelector((state) => state.app.platform)
-  const hasApiKey = useAppSelector(
-    (state) => state.app.hasApiKeys[state.app.settings.transcriptionProvider],
-  )
+  const providerReady = useAppSelector((state) => {
+    const provider = state.app.settings.transcriptionProvider
+    if (provider !== 'local') return state.app.hasApiKeys[provider]
+    const modelId = state.app.settings.transcriptionProviderSettings.local.modelId
+    return (
+      state.app.localEngineState.state === 'ready' &&
+      state.app.localEngineState.modelId === modelId &&
+      state.app.localModels.some((model) => model.id === modelId && model.isDownloaded)
+    )
+  })
   const currentSessionId = useAppSelector((state) => state.app.currentSession?.id ?? null)
   const { message } = AntdApp.useApp()
   const { t } = useTranslation()
@@ -44,13 +51,15 @@ export const useRecordingActions = () => {
   /** Starts capture immediately and buffers recent frames while Deepgram connects. */
   const startRecording = useCallback(async (): Promise<void> => {
     if (activeAttempt) return
-    if (!hasApiKey) {
+    if (!providerReady) {
       dispatch(setSettingsSection('transcription'))
       dispatch(setPage('settings'))
       void message.warning(
-        t('notices.transcriptionApiKeyRequired', {
-          provider: t(`settings.transcriptionProviders.${settings.transcriptionProvider}`),
-        }),
+        settings.transcriptionProvider === 'local'
+          ? t('settings.localSelectModel')
+          : t('notices.transcriptionApiKeyRequired', {
+              provider: t(`settings.transcriptionProviders.${settings.transcriptionProvider}`),
+            }),
       )
       return
     }
@@ -131,7 +140,7 @@ export const useRecordingActions = () => {
     } finally {
       if (attempt.cancelled && activeAttempt === attempt) activeAttempt = null
     }
-  }, [currentSessionId, dispatch, hasApiKey, message, platform, settings, t])
+  }, [currentSessionId, dispatch, message, platform, providerReady, settings, t])
 
   /** Cancels a pending start or stops capture before flushing the remote streams. */
   const stopRecording = useCallback(async (): Promise<void> => {

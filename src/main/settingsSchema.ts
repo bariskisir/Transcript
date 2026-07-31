@@ -9,6 +9,7 @@ import {
 } from '@shared/deepgram'
 import {
   DEFAULT_DEEPGRAM_TRANSCRIPTION_SETTINGS,
+  DEFAULT_LOCAL_TRANSCRIPTION_SETTINGS,
   DEFAULT_OPENROUTER_TRANSCRIPTION_SETTINGS,
   REST_TRANSCRIPTION_SPEEDS,
   TRANSCRIPTION_PROVIDERS,
@@ -49,10 +50,16 @@ const openRouterSettingsFieldsSchema = z.object({
   speed: z.enum(REST_TRANSCRIPTION_SPEEDS),
 })
 
+const localSettingsFieldsSchema = z.object({
+  modelId: z.string().trim().max(512),
+  language: z.string().trim().min(1).max(24),
+})
+
 const transcriptionProviderSettingsSchema = z
   .object({
     deepgram: deepgramSettingsFieldsSchema,
     openrouter: openRouterSettingsFieldsSchema,
+    local: localSettingsFieldsSchema,
   })
   .strict()
 
@@ -113,10 +120,16 @@ const openRouterSettingsPatchSchema = openRouterSettingsFieldsSchema
     'At least one OpenRouter setting must be provided.',
   )
 
+const localSettingsPatchSchema = localSettingsFieldsSchema
+  .partial()
+  .strict()
+  .refine((patch) => Object.keys(patch).length > 0, 'At least one Local setting must be provided.')
+
 const transcriptionProviderSettingsPatchSchema = z
   .object({
     deepgram: deepgramSettingsPatchSchema.optional(),
     openrouter: openRouterSettingsPatchSchema.optional(),
+    local: localSettingsPatchSchema.optional(),
   })
   .strict()
   .refine(
@@ -147,6 +160,7 @@ export const parsePersistedSettings = (input: unknown): AppSettings => {
   const persistedProviderSettings = asRecord(legacy.transcriptionProviderSettings)
   const persistedDeepgram = asRecord(persistedProviderSettings?.deepgram)
   const persistedOpenRouter = asRecord(persistedProviderSettings?.openrouter)
+  const persistedLocal = asRecord(persistedProviderSettings?.local)
   const deepgramSource = persistedDeepgram ?? legacy
   const deepgramCandidate = {
     ...DEFAULT_DEEPGRAM_TRANSCRIPTION_SETTINGS,
@@ -168,6 +182,10 @@ export const parsePersistedSettings = (input: unknown): AppSettings => {
     ...DEFAULT_OPENROUTER_TRANSCRIPTION_SETTINGS,
     ...persistedOpenRouter,
   }
+  const localCandidate = {
+    ...DEFAULT_LOCAL_TRANSCRIPTION_SETTINGS,
+    ...persistedLocal,
+  }
   const transcriptionProvider =
     TRANSCRIPTION_PROVIDERS.find((provider) => provider === legacy.transcriptionProvider) ??
     DEFAULT_SETTINGS.transcriptionProvider
@@ -187,6 +205,7 @@ export const parsePersistedSettings = (input: unknown): AppSettings => {
         ...(language.startsWith('en') ? {} : { redaction: 'none' as const }),
       },
       openrouter: openRouterCandidate,
+      local: localCandidate,
     },
     translationEnabled:
       typeof legacy.translationEnabled === 'boolean'
@@ -219,6 +238,7 @@ export const parsePersistedSettings = (input: unknown): AppSettings => {
         language: DEFAULT_DEEPGRAM_TRANSCRIPTION_SETTINGS.language,
       },
       openrouter: DEFAULT_OPENROUTER_TRANSCRIPTION_SETTINGS,
+      local: DEFAULT_LOCAL_TRANSCRIPTION_SETTINGS,
     },
   })
 }

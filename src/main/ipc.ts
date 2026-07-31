@@ -7,7 +7,10 @@ import { app, dialog, ipcMain, shell, type BrowserWindow, type WebContents } fro
 import { IpcChannel } from '@shared/IpcChannel'
 import { APP_AUTHOR_URL } from '@shared/appInfo'
 import { TRANSLATION_PROVIDERS, TRANSLATION_TARGET_LANGUAGES } from '@shared/translation'
-import { TRANSCRIPTION_PROVIDERS, type TranscriptionProvider } from '@shared/transcription'
+import {
+  REMOTE_TRANSCRIPTION_PROVIDERS,
+  type RemoteTranscriptionProvider,
+} from '@shared/transcription'
 import {
   AUDIO_SOURCES,
   LOG_LEVELS,
@@ -24,6 +27,7 @@ import type DeepgramCatalogService from './services/DeepgramCatalogService'
 import { reconcileDeepgramSettings } from './services/DeepgramCatalogService'
 import { renderSession } from './services/ExportService'
 import type LoggerService from './services/LoggerService'
+import type LocalModelService from './services/LocalModelService'
 import type OpenRouterAccountService from './services/OpenRouterAccountService'
 import type OpenRouterCatalogService from './services/OpenRouterCatalogService'
 import type StorageService from './services/StorageService'
@@ -50,7 +54,8 @@ const dialogTitleSchema = z.string().trim().min(1).max(120)
 const translationProviderSchema = z.enum(TRANSLATION_PROVIDERS)
 const translationTargetSchema = z.enum(TRANSLATION_TARGET_LANGUAGES)
 const apiKeySchema = z.string().trim().min(20).max(512)
-const transcriptionProviderSchema = z.enum(TRANSCRIPTION_PROVIDERS)
+const transcriptionProviderSchema = z.enum(REMOTE_TRANSCRIPTION_PROVIDERS)
+const localModelIdSchema = z.string().trim().min(1).max(512)
 const rendererLogSchema = z.object({
   level: z.enum(LOG_LEVELS),
   module: z.string().trim().min(1).max(100),
@@ -69,11 +74,12 @@ const TRUSTED_EXTERNAL_ORIGINS = new Set([
 
 interface IpcServices {
   storage: StorageService
-  credentials: Record<TranscriptionProvider, CredentialService>
+  credentials: Record<RemoteTranscriptionProvider, CredentialService>
   deepgramAccount: DeepgramAccountService
   deepgramCatalog: DeepgramCatalogService
   openRouterAccount: OpenRouterAccountService
   openRouterCatalog: OpenRouterCatalogService
+  localModels: LocalModelService
   transcript: TranscriptService
   tray: TrayService
   updater: AppUpdater
@@ -116,6 +122,7 @@ export const registerIpc = (window: BrowserWindow, services: IpcServices): void 
       hasOpenRouterApiKey,
       deepgramModels,
       openRouterModels,
+      localModels,
     ] = await Promise.all([
       services.storage.loadSettings(),
       services.storage.listSessions(),
@@ -123,6 +130,7 @@ export const registerIpc = (window: BrowserWindow, services: IpcServices): void 
       services.credentials.openrouter.hasApiKey(),
       services.deepgramCatalog.getModels(),
       services.openRouterCatalog.getModels(),
+      services.localModels.getModels(),
     ])
     const reconciledDeepgram = reconcileDeepgramSettings(
       loadedSettings.transcriptionProviderSettings.deepgram,
@@ -157,6 +165,8 @@ export const registerIpc = (window: BrowserWindow, services: IpcServices): void 
       hasApiKeys: { deepgram: hasDeepgramApiKey, openrouter: hasOpenRouterApiKey },
       deepgramModels,
       openRouterModels,
+      localModels,
+      localEngineState: services.localModels.getEngineState(),
       platform: process.platform,
       version: app.getVersion(),
     }
@@ -173,6 +183,7 @@ export const registerIpc = (window: BrowserWindow, services: IpcServices): void 
     window.webContents.setZoomFactor(savedSettings.pageZoom)
     services.tray.applySettings(savedSettings)
     services.logger.setLevel(savedSettings.logLevel)
+    if (savedSettings.transcriptionProvider !== 'local') await services.localModels.unload()
     return savedSettings
   })
   ipcMain.handle(
@@ -213,6 +224,64 @@ export const registerIpc = (window: BrowserWindow, services: IpcServices): void 
   ipcMain.handle(IpcChannel.OpenRouterModels, async (event) => {
     assertSender(event.sender)
     return services.openRouterCatalog.getModels()
+  })
+  ipcMain.handle(IpcChannel.LocalModels, async (event) => {
+    assertSender(event.sender)
+    return services.localModels.getModels()
+  })
+  ipcMain.handle(IpcChannel.LocalModelsRescan, async (event) => {
+    assertSender(event.sender)
+    return services.localModels.rescan()
+  })
+  ipcMain.handle(IpcChannel.LocalModelDownload, async (event, input: unknown) => {
+    assertSender(event.sender)
+    await services.localModels.download(localModelIdSchema.parse(input))
+  })
+  ipcMain.handle(IpcChannel.LocalModelDownloadCancel, async (event, input: unknown) => {
+    assertSender(event.sender)
+    await services.localModels.cancelDownload(localModelIdSchema.parse(input))
+  })
+  ipcMain.handle(IpcChannel.LocalModelDelete, async (event, input: unknown) => {
+    assertSender(event.sender)
+    const modelId = localModelIdSchema.parse(input)
+    await services.localModels.delete(modelId)
+    const settings = await services.storage.loadSettings()
+    if (settings.transcriptionProviderSettings.local.modelId !== modelId) return settings
+    return services.storage.updateSettings({
+      transcriptionProviderSettings: { local: { modelId: '' } },
+    })
+  })
+  ipcMain.handle(IpcChannel.LocalModelSelect, async (event, input: unknown) => {
+    assertSender(event.sender)
+    const modelId = localModelIdSchema.parse(input)
+    await services.localModels.select(modelId)
+    const [model, settings] = await Promise.all([
+      services.localModels.getModel(modelId),
+      services.storage.loadSettings(),
+    ])
+    if (!model) throw new Error('The selected Local model is no longer available.')
+    const currentLanguage = settings.transcriptionProviderSettings.local.language
+    const languageSupported =
+      (currentLanguage === 'auto' && model.supportsLanguageDetection) ||
+      model.languages.includes(currentLanguage)
+    const language = languageSupported
+      ? currentLanguage
+      : (model.languages[0] ?? (model.supportsLanguageDetection ? 'auto' : 'en'))
+    return services.storage.updateSettings({
+      transcriptionProviderSettings: { local: { modelId, language } },
+    })
+  })
+  ipcMain.handle(IpcChannel.LocalModelEject, async (event) => {
+    assertSender(event.sender)
+    await services.localModels.unload()
+    return services.storage.updateSettings({
+      transcriptionProviderSettings: { local: { modelId: '' } },
+    })
+  })
+  ipcMain.handle(IpcChannel.LocalModelsOpenDirectory, async (event) => {
+    assertSender(event.sender)
+    const error = await shell.openPath(services.localModels.getModelsDirectory())
+    if (error) throw new Error(error)
   })
   ipcMain.handle(IpcChannel.SessionStart, async (event, input: unknown) => {
     assertSender(event.sender)

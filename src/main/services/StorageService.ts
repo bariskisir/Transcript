@@ -150,11 +150,12 @@ export default class StorageService {
       const current = await this.readSettingsUnlocked()
       const deepgramPatch = patch.transcriptionProviderSettings?.deepgram
       const openRouterPatch = patch.transcriptionProviderSettings?.openrouter
+      const localPatch = patch.transcriptionProviderSettings?.local
       const validated = settingsSchema.parse({
         ...current,
         ...patch,
         transcriptionProviderSettings:
-          deepgramPatch || openRouterPatch
+          deepgramPatch || openRouterPatch || localPatch
             ? {
                 ...current.transcriptionProviderSettings,
                 deepgram: {
@@ -164,6 +165,10 @@ export default class StorageService {
                 openrouter: {
                   ...current.transcriptionProviderSettings.openrouter,
                   ...openRouterPatch,
+                },
+                local: {
+                  ...current.transcriptionProviderSettings.local,
+                  ...localPatch,
                 },
               }
             : current.transcriptionProviderSettings,

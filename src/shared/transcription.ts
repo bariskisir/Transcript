@@ -8,10 +8,13 @@ import {
   type DeepgramRedaction,
 } from './deepgram'
 
-export const TRANSCRIPTION_PROVIDERS = ['deepgram', 'openrouter'] as const
+export const TRANSCRIPTION_PROVIDERS = ['deepgram', 'openrouter', 'local'] as const
+export const REMOTE_TRANSCRIPTION_PROVIDERS = ['deepgram', 'openrouter'] as const
 export const REST_TRANSCRIPTION_SPEEDS = ['low', 'medium', 'high'] as const
 
 export type TranscriptionProvider = (typeof TRANSCRIPTION_PROVIDERS)[number]
+/** Transcription providers that require an encrypted remote API credential. */
+export type RemoteTranscriptionProvider = (typeof REMOTE_TRANSCRIPTION_PROVIDERS)[number]
 /** Responsiveness profile used by request-response transcription providers. */
 export type RestTranscriptionSpeed = (typeof REST_TRANSCRIPTION_SPEEDS)[number]
 
@@ -39,9 +42,16 @@ export interface OpenRouterTranscriptionSettings {
   speed: RestTranscriptionSpeed
 }
 
+/** Persisted model and language intent for on-device transcription. */
+export interface LocalTranscriptionSettings {
+  modelId: string
+  language: string
+}
+
 export interface TranscriptionProviderSettings {
   deepgram: DeepgramTranscriptionSettings
   openrouter: OpenRouterTranscriptionSettings
+  local: LocalTranscriptionSettings
 }
 
 export type DeepgramTranscriptionSettingsPatch = {
@@ -53,9 +63,15 @@ export type OpenRouterTranscriptionSettingsPatch = {
   [Key in keyof OpenRouterTranscriptionSettings]?: OpenRouterTranscriptionSettings[Key] | undefined
 }
 
+/** Partial persisted update for local transcription settings. */
+export type LocalTranscriptionSettingsPatch = {
+  [Key in keyof LocalTranscriptionSettings]?: LocalTranscriptionSettings[Key] | undefined
+}
+
 export type TranscriptionProviderSettingsPatch = {
   deepgram?: DeepgramTranscriptionSettingsPatch | undefined
   openrouter?: OpenRouterTranscriptionSettingsPatch | undefined
+  local?: LocalTranscriptionSettingsPatch | undefined
 }
 
 export const DEFAULT_DEEPGRAM_TRANSCRIPTION_SETTINGS: DeepgramTranscriptionSettings = {
@@ -79,4 +95,9 @@ export const DEFAULT_OPENROUTER_TRANSCRIPTION_SETTINGS: OpenRouterTranscriptionS
   model: 'openai/whisper-large-v3-turbo',
   language: '',
   speed: 'low',
+}
+
+export const DEFAULT_LOCAL_TRANSCRIPTION_SETTINGS: LocalTranscriptionSettings = {
+  modelId: '',
+  language: 'auto',
 }

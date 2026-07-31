@@ -11,6 +11,9 @@ import {
   receiveTranscriptResult,
   receiveTranslationResult,
   setPage,
+  setLocalEngineState,
+  setLocalModelOperation,
+  setLocalModels,
   setSessionState,
   setUpdateState,
 } from '@renderer/store/appSlice'
@@ -30,11 +33,31 @@ export const useAppInit = (): void => {
 
   useEffect(() => {
     let active = true
+    const pendingLocalOperations = new Map<string, Parameters<typeof setLocalModelOperation>[0]>()
+    let localOperationTimer: number | null = null
+
+    /** Coalesces native download bursts outside Electron's synchronous IPC callback. */
+    const publishLocalOperation = (event: Parameters<typeof setLocalModelOperation>[0]): void => {
+      pendingLocalOperations.set(event.modelId, event)
+      if (localOperationTimer !== null) return
+      localOperationTimer = window.setTimeout(() => {
+        localOperationTimer = null
+        const operations = [...pendingLocalOperations.values()]
+        pendingLocalOperations.clear()
+        operations.forEach((operation) => {
+          dispatch(setLocalModelOperation(operation))
+        })
+      }, 16)
+    }
+
     const cleanup = [
       window.app.onSessionState((event) => dispatch(setSessionState(event))),
       window.app.onTranscriptResult((event) => dispatch(receiveTranscriptResult(event))),
       window.app.onTranslationResult((event) => dispatch(receiveTranslationResult(event))),
       window.app.onUpdateState((event) => dispatch(setUpdateState(event))),
+      window.app.onLocalModelOperation(publishLocalOperation),
+      window.app.onLocalEngineState((event) => dispatch(setLocalEngineState(event))),
+      window.app.onLocalModelsChanged((models) => dispatch(setLocalModels(models))),
       window.app.onSettingsOpenRequested(() => dispatch(setPage('settings'))),
       window.app.onError((event) => {
         logger.error('Main process reported an application error.', event.message)
@@ -63,6 +86,8 @@ export const useAppInit = (): void => {
 
     return () => {
       active = false
+      if (localOperationTimer !== null) window.clearTimeout(localOperationTimer)
+      pendingLocalOperations.clear()
       cleanup.forEach((unsubscribe) => {
         unsubscribe()
       })
