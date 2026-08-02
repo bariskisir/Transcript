@@ -27,8 +27,8 @@ import TrayService from './services/TrayService'
 import TranslationProviderService from './services/TranslationProviderService'
 import WindowService from './services/WindowService'
 
-const windowService = new WindowService()
 const applicationPaths = configureApplicationPaths()
+const windowService = new WindowService(applicationPaths.dataRoot)
 const hasSingleInstanceLock = app.requestSingleInstanceLock()
 let transcriptService: TranscriptService | null = null
 let localModelService: LocalModelService | null = null
