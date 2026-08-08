@@ -15,8 +15,6 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT license"></a>
 </p>
 
-
-
 <p align="center">
   <img src="images/interface.png" alt="Transcript interface" width="840">
   <img src="images/interface2.png" alt="Transcript interface" width="840">
@@ -41,7 +39,6 @@ npm run dev
 Chrome Transcript Extension -> https://github.com/bariskisir/ChromeTranscript
 
 Chrome Live Translator Extension -> https://github.com/bariskisir/ChromeLiveTranslator
-
 
 ## License
 

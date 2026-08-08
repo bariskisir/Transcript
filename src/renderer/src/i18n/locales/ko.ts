@@ -93,6 +93,7 @@ export default {
     transcription: '녹음',
     translation: '번역',
     updates: '업데이트',
+    telemetry: '원격 분석',
     about: '정보',
     interfaceLanguage: '인터페이스 언어',
     interfaceLanguageDescription: '애플리케이션 표시 언어를 변경합니다.',
@@ -249,6 +250,9 @@ export default {
     releaseNotes: '릴리스 노트',
     updateError: '업데이트 확인에 실패했습니다.',
     version: '버전 {{version}}',
+    telemetryCollection: '익명 사용 현황 원격 분석 공유',
+    telemetryDescription:
+      '활성 사용자 수를 집계하기 위해 애플리케이션 시작 시 익명 설치 ID, 버전, 플랫폼 및 인터페이스 언어를 전송합니다. Microsoft는 연결 IP에서 대략적인 국가와 도시를 추정합니다. 전사 내용은 전송하지 않습니다.',
     author: '제작자',
     sourceCode: '소스 코드',
   },

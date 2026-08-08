@@ -85,6 +85,7 @@ export default {
     transcription: 'Transcription',
     translation: 'Translation',
     updates: 'Updates',
+    telemetry: 'Telemetry',
     about: 'About',
     interfaceLanguage: 'Interface language',
     interfaceLanguageDescription: 'Change the application display language.',
@@ -227,6 +228,9 @@ export default {
     releaseNotes: 'Release notes',
     updateError: 'Update check failed.',
     version: 'Version {{version}}',
+    telemetryCollection: 'Share anonymous usage telemetry',
+    telemetryDescription:
+      'At application startup, an anonymous installation ID, version, platform, and interface locale are sent to count active users. Microsoft derives an approximate country and city from the connection IP. No transcript content is sent.',
     author: 'Author',
     sourceCode: 'Source Code',
   },

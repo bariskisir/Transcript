@@ -94,6 +94,7 @@ export default {
     transcription: 'Transkription',
     translation: 'Übersetzung',
     updates: 'Updates',
+    telemetry: 'Telemetrie',
     about: 'Über',
     interfaceLanguage: 'Oberflächensprache',
     interfaceLanguageDescription: 'Wählen Sie die Sprache der Anwendung.',
@@ -255,6 +256,9 @@ export default {
     releaseNotes: 'Versionshinweise',
     updateError: 'Update-Prüfung fehlgeschlagen.',
     version: 'Version {{version}}',
+    telemetryCollection: 'Anonyme Nutzungstelemetrie teilen',
+    telemetryDescription:
+      'Beim Start der Anwendung werden eine anonyme Installations-ID, Version, Plattform und Oberflächensprache gesendet, um aktive Nutzer zu zählen. Microsoft leitet aus der Verbindungs-IP ein ungefähres Land und eine Stadt ab. Transkriptinhalte werden nicht gesendet.',
     author: 'Autor',
     sourceCode: 'Quellcode',
   },

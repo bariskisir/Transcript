@@ -94,6 +94,7 @@ export default {
     transcription: 'Transcription',
     translation: 'Traduction',
     updates: 'Mises à jour',
+    telemetry: 'Télémétrie',
     about: 'À propos',
     interfaceLanguage: "Langue de l'interface",
     interfaceLanguageDescription: "Choisissez la langue de l'application.",
@@ -255,6 +256,9 @@ export default {
     releaseNotes: 'Notes de version',
     updateError: 'Échec de la recherche de mise à jour.',
     version: 'Version {{version}}',
+    telemetryCollection: "Partager les données d'utilisation anonymes",
+    telemetryDescription:
+      "Au démarrage de l'application, un identifiant d'installation anonyme, la version, la plateforme et la langue de l'interface sont envoyés pour compter les utilisateurs actifs. Microsoft déduit un pays et une ville approximatifs de l'adresse IP de connexion. Aucun contenu de transcription n'est envoyé.",
     author: 'Auteur',
     sourceCode: 'Code source',
   },

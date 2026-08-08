@@ -22,6 +22,7 @@ import LocalModelService from './services/LocalModelService'
 import LocalTranscriptionService from './services/LocalTranscriptionService'
 
 import StorageService from './services/StorageService'
+import TelemetryService from './telemetry/telemetry.service'
 import TranscriptService from './services/TranscriptService'
 import TrayService from './services/TrayService'
 import TranslationProviderService from './services/TranslationProviderService'
@@ -29,6 +30,7 @@ import WindowService from './services/WindowService'
 
 const applicationPaths = configureApplicationPaths()
 const windowService = new WindowService(applicationPaths.dataRoot)
+const telemetryService = new TelemetryService(applicationPaths.dataRoot)
 const hasSingleInstanceLock = app.requestSingleInstanceLock()
 let transcriptService: TranscriptService | null = null
 let localModelService: LocalModelService | null = null
@@ -42,6 +44,17 @@ const openApplicationWindow = async (): Promise<void> => {
   const settings = await storage.loadSettings()
   const logger = new LoggerService(applicationPaths.logsRoot, settings.logLevel)
   loggerService = logger
+  void telemetryService
+    .trackStartup({
+      appName: 'Transcript',
+      enabled: settings.telemetryEnabled,
+      version: app.getVersion(),
+      platform: process.platform,
+      locale: settings.uiLanguage,
+    })
+    .catch((error: unknown) => {
+      logger.warn('TelemetryService', 'Startup telemetry could not be sent.', error)
+    })
   const credentials = {
     deepgram: new CredentialService(join(applicationPaths.dataRoot, 'credentials.bin')),
     openrouter: new CredentialService(

@@ -94,6 +94,7 @@ export default {
     transcription: 'Transkripsiyon',
     translation: 'Çeviri',
     updates: 'Güncellemeler',
+    telemetry: 'Telemetri',
     about: 'Hakkında',
     interfaceLanguage: 'Arayüz dili',
     interfaceLanguageDescription: 'Uygulamada kullanılacak dili seçin.',
@@ -251,6 +252,9 @@ export default {
     releaseNotes: 'Sürüm notları',
     updateError: 'Güncelleme denetimi başarısız.',
     version: 'Sürüm {{version}}',
+    telemetryCollection: 'Anonim kullanım telemetrisini paylaş',
+    telemetryDescription:
+      'Etkin kullanıcı sayısını takip etmek için uygulama açılışında anonim bir kurulum kimliği, sürüm, platform ve arayüz dili gönderilir. Microsoft bağlantı IP adresinden yaklaşık ülke ve şehir bilgisini türetir. Transkript içeriği gönderilmez.',
     author: 'Yazar',
     sourceCode: 'Kaynak Kod',
   },

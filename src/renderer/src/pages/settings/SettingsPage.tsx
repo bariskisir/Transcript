@@ -3,6 +3,7 @@
  */
 
 import {
+  Activity,
   AudioLines,
   Info,
   Languages,
@@ -20,6 +21,7 @@ import DisplaySettingsSection from './sections/DisplaySettingsSection'
 import LoggingSettingsSection from './sections/LoggingSettingsSection'
 import TranscriptionSettingsSection from './sections/TranscriptionSettingsSection'
 import TranslationSettingsSection from './sections/TranslationSettingsSection'
+import TelemetrySettingsSection from './sections/TelemetrySettingsSection'
 import UpdatesSettingsSection from './sections/UpdatesSettingsSection'
 import styles from './SettingsPage.module.scss'
 
@@ -46,6 +48,7 @@ const SettingsPage = (): React.JSX.Element => {
       icon: <Languages size={17} />,
     },
     { key: 'updates', label: t('settings.updates'), icon: <RefreshCw size={17} /> },
+    { key: 'telemetry', label: t('settings.telemetry'), icon: <Activity size={17} /> },
     { key: 'logging', label: t('settings.logging'), icon: <ScrollText size={17} /> },
     { key: 'about', label: t('settings.about'), icon: <Info size={17} /> },
   ]
@@ -56,6 +59,7 @@ const SettingsPage = (): React.JSX.Element => {
     if (section === 'transcription') return <TranscriptionSettingsSection />
     if (section === 'translation') return <TranslationSettingsSection />
     if (section === 'updates') return <UpdatesSettingsSection />
+    if (section === 'telemetry') return <TelemetrySettingsSection />
     if (section === 'logging') return <LoggingSettingsSection />
     if (section === 'about') return <AboutSettingsSection />
     return <GeneralSettingsSection />

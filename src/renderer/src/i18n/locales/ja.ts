@@ -94,6 +94,7 @@ export default {
     transcription: '文字起こし',
     translation: '翻訳',
     updates: 'アップデート',
+    telemetry: 'テレメトリ',
     about: 'について',
     interfaceLanguage: 'インターフェース言語',
     interfaceLanguageDescription: 'アプリケーションの表示言語を変更します。',
@@ -253,6 +254,9 @@ export default {
     releaseNotes: 'リリースノート',
     updateError: 'アップデートの確認に失敗しました。',
     version: 'バージョン {{version}}',
+    telemetryCollection: '匿名の利用状況テレメトリを共有',
+    telemetryDescription:
+      'アクティブユーザー数を把握するため、アプリケーションの起動時に匿名のインストールID、バージョン、プラットフォーム、インターフェース言語を送信します。Microsoft は接続元IPからおおよその国と都市を推定します。トランスクリプトの内容は送信されません。',
     author: '作者',
     sourceCode: 'ソースコード',
   },

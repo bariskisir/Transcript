@@ -357,6 +357,11 @@ describe('settingsPatchSchema', () => {
     expect(result.success).toBe(true)
   })
 
+  it('accepts a telemetry toggle change', () => {
+    const result = settingsPatchSchema.safeParse({ telemetryEnabled: false })
+    expect(result.success).toBe(true)
+  })
+
   it('accepts a valid navbar position change', () => {
     const result = settingsPatchSchema.safeParse({ navbarPosition: 'top' })
     expect(result.success).toBe(true)
