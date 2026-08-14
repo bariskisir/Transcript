@@ -58,6 +58,7 @@ export interface AppSettings {
   alwaysOnTop: boolean
   showTrayIcon: boolean
   minimizeToTrayOnClose: boolean
+  startMinimized: boolean
   autoUpdate: boolean
   telemetryEnabled: boolean
   logLevel: LogLevel
@@ -91,8 +92,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
   speakerDeviceId: 'default',
   speakerEnabled: true,
   alwaysOnTop: false,
-  showTrayIcon: true,
-  minimizeToTrayOnClose: true,
+  showTrayIcon: false,
+  minimizeToTrayOnClose: false,
+  startMinimized: false,
   autoUpdate: true,
   telemetryEnabled: true,
   logLevel: 'info',

@@ -85,12 +85,16 @@ export default {
     zoomIn: 'Увеличить',
     resetZoom: 'Сбросить масштаб',
     traySettings: 'Настройки системного трея',
+    tray: 'Область уведомлений',
     trayUnavailable: 'Windows only',
     showTrayIcon: 'Показывать значок в трее',
     showTrayIconDescription: 'Показывать Transcript в системном трее.',
     minimizeToTrayOnClose: 'Сворачивать в трей при закрытии',
     minimizeToTrayOnCloseDescription:
       'Скрывать окно в системном трее вместо выхода из приложения при закрытии.',
+    startMinimized: 'Запускать свёрнутым',
+    startMinimizedDescription:
+      'Запускает приложение скрытым в области уведомлений, не показывая его окно.',
     transcription: 'Транскрипция',
     translation: 'Перевод',
     updates: 'Обновления',

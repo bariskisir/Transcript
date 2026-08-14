@@ -146,6 +146,7 @@ export const registerIpc = (window: BrowserWindow, services: IpcServices): void 
     if (process.platform === 'linux') {
       settings.showTrayIcon = false
       settings.minimizeToTrayOnClose = false
+      settings.startMinimized = false
     }
     window.webContents.setZoomFactor(settings.pageZoom)
     if (initialSessions.length === 0) {
@@ -177,6 +178,7 @@ export const registerIpc = (window: BrowserWindow, services: IpcServices): void 
     if (process.platform === 'linux') {
       delete patch.showTrayIcon
       delete patch.minimizeToTrayOnClose
+      delete patch.startMinimized
     }
     const savedSettings = await services.storage.updateSettings(patch)
     window.setAlwaysOnTop(savedSettings.alwaysOnTop)

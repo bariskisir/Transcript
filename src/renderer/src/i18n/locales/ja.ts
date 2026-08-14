@@ -85,12 +85,16 @@ export default {
     zoomIn: '拡大',
     resetZoom: 'ズームをリセット',
     traySettings: 'システムトレイ設定',
+    tray: 'トレイ',
     trayUnavailable: 'Windows only',
     showTrayIcon: 'トレイアイコンを表示',
     showTrayIconDescription: 'システムトレイに Transcript を表示します。',
     minimizeToTrayOnClose: '閉じるときにトレイへ最小化',
     minimizeToTrayOnCloseDescription:
       'ウィンドウを閉じたとき、終了せずにシステムトレイへ隠します。',
+    startMinimized: '最小化して起動',
+    startMinimizedDescription:
+      'ウィンドウを表示せず、システムトレイに隠してアプリケーションを起動します。',
     transcription: '文字起こし',
     translation: '翻訳',
     updates: 'アップデート',

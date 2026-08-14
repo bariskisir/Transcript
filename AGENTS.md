@@ -102,6 +102,8 @@ transcript/
 │       │       │   └── SettingLabel.tsx # Reusable labelled setting row
 │       │       └── sections/
 │       │           ├── GeneralSettingsSection.tsx
+│       │           ├── DisplaySettingsSection.tsx
+│       │           ├── TraySettingsSection.tsx
 │       │           ├── TranscriptionSettingsSection.tsx
 │       │           ├── TranslationSettingsSection.tsx
 │       │           ├── UpdatesSettingsSection.tsx

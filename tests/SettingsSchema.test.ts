@@ -42,8 +42,9 @@ describe('parsePersistedSettings', () => {
     expect(result.theme).toBe('system')
     expect(result.navbarPosition).toBe('top')
     expect(result.pageZoom).toBe(1)
-    expect(result.showTrayIcon).toBe(true)
-    expect(result.minimizeToTrayOnClose).toBe(true)
+    expect(result.showTrayIcon).toBe(false)
+    expect(result.minimizeToTrayOnClose).toBe(false)
+    expect(result.startMinimized).toBe(false)
   })
 
   it('preserves valid display and language settings from partial input', () => {
@@ -230,6 +231,24 @@ describe('settingsSchema', () => {
     expect(result.success).toBe(false)
   })
 
+  it('rejects minimized startup when the tray icon is disabled', () => {
+    const result = settingsSchema.safeParse({
+      ...validSettings,
+      showTrayIcon: false,
+      startMinimized: true,
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('accepts minimized startup when the tray icon is enabled', () => {
+    const result = settingsSchema.safeParse({
+      ...validSettings,
+      showTrayIcon: true,
+      startMinimized: true,
+    })
+    expect(result.success).toBe(true)
+  })
+
   it('accepts a dynamically discovered Deepgram model identifier', () => {
     const dynamic = {
       ...validSettings,
@@ -382,6 +401,11 @@ describe('settingsPatchSchema', () => {
       showTrayIcon: true,
       minimizeToTrayOnClose: true,
     })
+    expect(result.success).toBe(true)
+  })
+
+  it('accepts a minimized startup change', () => {
+    const result = settingsPatchSchema.safeParse({ startMinimized: true })
     expect(result.success).toBe(true)
   })
 

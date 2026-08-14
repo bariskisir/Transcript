@@ -6,6 +6,7 @@ import {
   Activity,
   AudioLines,
   Info,
+  Inbox,
   Languages,
   Monitor,
   RefreshCw,
@@ -19,6 +20,7 @@ import AboutSettingsSection from './sections/AboutSettingsSection'
 import GeneralSettingsSection from './sections/GeneralSettingsSection'
 import DisplaySettingsSection from './sections/DisplaySettingsSection'
 import LoggingSettingsSection from './sections/LoggingSettingsSection'
+import TraySettingsSection from './sections/TraySettingsSection'
 import TranscriptionSettingsSection from './sections/TranscriptionSettingsSection'
 import TranslationSettingsSection from './sections/TranslationSettingsSection'
 import TelemetrySettingsSection from './sections/TelemetrySettingsSection'
@@ -37,6 +39,7 @@ const SettingsPage = (): React.JSX.Element => {
   }> = [
     { key: 'general', label: t('settings.general'), icon: <Settings2 size={17} /> },
     { key: 'display', label: t('settings.display'), icon: <Monitor size={17} /> },
+    { key: 'tray', label: t('settings.tray'), icon: <Inbox size={17} /> },
     {
       key: 'transcription',
       label: t('settings.transcription'),
@@ -56,6 +59,7 @@ const SettingsPage = (): React.JSX.Element => {
   /** Resolves the active category component without keeping inactive forms mounted. */
   const renderSection = (): React.JSX.Element => {
     if (section === 'display') return <DisplaySettingsSection />
+    if (section === 'tray') return <TraySettingsSection />
     if (section === 'transcription') return <TranscriptionSettingsSection />
     if (section === 'translation') return <TranslationSettingsSection />
     if (section === 'updates') return <UpdatesSettingsSection />

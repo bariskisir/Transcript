@@ -82,6 +82,7 @@ const settingsFieldsSchema = z.object({
   alwaysOnTop: z.boolean(),
   showTrayIcon: z.boolean(),
   minimizeToTrayOnClose: z.boolean(),
+  startMinimized: z.boolean(),
   autoUpdate: z.boolean(),
   telemetryEnabled: z.boolean(),
   logLevel: z.enum(LOG_LEVELS),
@@ -93,6 +94,13 @@ export const settingsSchema = settingsFieldsSchema.superRefine((settings, contex
       code: 'custom',
       path: ['minimizeToTrayOnClose'],
       message: 'Minimize to tray requires the tray icon to be enabled.',
+    })
+  }
+  if (settings.startMinimized && !settings.showTrayIcon) {
+    context.addIssue({
+      code: 'custom',
+      path: ['startMinimized'],
+      message: 'Starting minimized requires the tray icon to be enabled.',
     })
   }
   const deepgram = settings.transcriptionProviderSettings.deepgram

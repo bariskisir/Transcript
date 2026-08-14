@@ -28,6 +28,7 @@ export type AppPage = 'home' | 'settings'
 export type SettingsSection =
   | 'general'
   | 'display'
+  | 'tray'
   | 'transcription'
   | 'translation'
   | 'updates'

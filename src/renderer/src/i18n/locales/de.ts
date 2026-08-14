@@ -85,12 +85,16 @@ export default {
     zoomIn: 'Vergrößern',
     resetZoom: 'Zoom zurücksetzen',
     traySettings: 'Infobereich-Einstellungen',
+    tray: 'Infobereich',
     trayUnavailable: 'Windows only',
     showTrayIcon: 'Symbol im Infobereich anzeigen',
     showTrayIconDescription: 'Transcript im Infobereich anzeigen.',
     minimizeToTrayOnClose: 'Beim Schließen in den Infobereich minimieren',
     minimizeToTrayOnCloseDescription:
       'Das Fenster beim Schließen im Infobereich ausblenden, statt die Anwendung zu beenden.',
+    startMinimized: 'Minimiert starten',
+    startMinimizedDescription:
+      'Startet die Anwendung im Infobereich ausgeblendet, ohne das Fenster anzuzeigen.',
     transcription: 'Transkription',
     translation: 'Übersetzung',
     updates: 'Updates',

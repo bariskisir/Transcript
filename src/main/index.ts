@@ -72,7 +72,10 @@ const openApplicationWindow = async (): Promise<void> => {
     new BingTranslateService(),
   )
   const updater = new AppUpdater(logger)
-  const window = await windowService.createWindow(logger)
+  const window = await windowService.createWindow(
+    logger,
+    settings.showTrayIcon && settings.startMinimized,
+  )
   const localModels = new LocalModelService(
     applicationPaths.modelsRoot,
     {
@@ -196,8 +199,8 @@ if (!hasSingleInstanceLock) {
   app.on('second-instance', () => {
     const window = windowService.getMainWindow()
     if (!window) return
-    if (window.isMinimized()) window.restore()
     window.show()
+    if (window.isMinimized()) window.restore()
     window.focus()
   })
   void app

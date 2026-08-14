@@ -76,12 +76,16 @@ export default {
     zoomIn: 'Zoom in',
     resetZoom: 'Reset zoom',
     traySettings: 'Tray Settings',
+    tray: 'Tray',
     trayUnavailable: 'Windows only',
     showTrayIcon: 'Show tray icon',
     showTrayIconDescription: 'Show Transcript in the system tray.',
     minimizeToTrayOnClose: 'Minimize to tray on close',
     minimizeToTrayOnCloseDescription:
       'Hide the window in the system tray instead of quitting when it is closed.',
+    startMinimized: 'Start minimized',
+    startMinimizedDescription:
+      'Start the application hidden in the system tray instead of showing its window.',
     transcription: 'Transcription',
     translation: 'Translation',
     updates: 'Updates',

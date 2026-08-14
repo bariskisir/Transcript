@@ -85,12 +85,16 @@ export default {
     zoomIn: 'Ampliar',
     resetZoom: 'Repor zoom',
     traySettings: 'Definições da área de notificação',
+    tray: 'Área de notificação',
     trayUnavailable: 'Windows only',
     showTrayIcon: 'Mostrar ícone na área de notificação',
     showTrayIconDescription: 'Mostrar o Transcript na área de notificação.',
     minimizeToTrayOnClose: 'Minimizar para a área de notificação ao fechar',
     minimizeToTrayOnCloseDescription:
       'Oculte a janela na área de notificação em vez de sair ao fechá-la.',
+    startMinimized: 'Iniciar minimizado',
+    startMinimizedDescription:
+      'Inicie o aplicativo oculto na área de notificação em vez de mostrar a janela.',
     transcription: 'Transcrição',
     translation: 'Tradução',
     updates: 'Atualizações',
