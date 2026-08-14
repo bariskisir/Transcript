@@ -15,6 +15,8 @@ import {
 import type LoggerService from './LoggerService'
 
 const ALLOWED_MEDIA_PERMISSIONS = new Set(['media', 'display-capture', 'speaker-selection'])
+/** Fallback that reveals the window when the ready-to-show event never fires. */
+const REVEAL_WINDOW_FALLBACK_MS = 250
 
 export default class WindowService {
   private mainWindow: BrowserWindow | null = null
@@ -78,12 +80,19 @@ export default class WindowService {
     this.configureSecurity(window)
     this.configureMediaAccess(window)
     this.configureWindowStatePersistence(window)
+    const revealWindow = (): void => {
+      if (window.isDestroyed() || window.isVisible()) return
+      if (startMinimized) window.hide()
+      else window.show()
+    }
     window.once('ready-to-show', () => {
       if (storedState?.fullScreen) window.setFullScreen(true)
       else if (storedState?.maximized) window.maximize()
-      if (startMinimized) window.hide()
-      else window.show()
+      revealWindow()
     })
+    window.webContents.on('did-finish-load', () =>
+      setTimeout(revealWindow, REVEAL_WINDOW_FALLBACK_MS),
+    )
     window.once('closed', () => {
       if (this.stateSaveTimer) clearTimeout(this.stateSaveTimer)
       this.stateSaveTimer = null
