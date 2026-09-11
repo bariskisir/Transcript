@@ -3,13 +3,14 @@
  */
 
 import { toGoogleLanguageCode, type TranslationTargetLanguage } from '@shared/translation'
+import { httpFetch } from './HttpFetch'
 
 const GOOGLE_TRANSLATE_ENDPOINT = 'https://translate.googleapis.com/translate_a/single'
 const REQUEST_TIMEOUT_MS = 10_000
 
 export default class GoogleTranslateService {
   /** Creates a translator with an injectable fetch boundary for deterministic tests. */
-  public constructor(private readonly fetcher: typeof fetch = fetch) {}
+  public constructor(private readonly fetcher: typeof fetch = httpFetch) {}
 
   /** Translates one non-empty sentence and combines Google's nested response chunks. */
   public async translate(

@@ -8,6 +8,7 @@ import {
   toHourlyPriceUsd,
 } from '@shared/openrouter'
 import { z } from 'zod'
+import { httpFetch } from './HttpFetch'
 import type LoggerService from './LoggerService'
 
 const pricingItemSchema = z.object({
@@ -84,7 +85,7 @@ export default class OpenRouterCatalogService {
   /** Fetches the live catalog and falls back to the last verified duration-priced set. */
   public async getModels(): Promise<OpenRouterSpeechModel[]> {
     try {
-      const response = await fetch(OPENROUTER_CATALOG_URL)
+      const response = await httpFetch(OPENROUTER_CATALOG_URL)
       if (!response.ok) throw new Error(`OpenRouter catalog returned HTTP ${response.status}.`)
       const models = parseOpenRouterCatalog(await response.json())
       if (models.length === 0)

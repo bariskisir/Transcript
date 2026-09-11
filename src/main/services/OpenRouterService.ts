@@ -6,6 +6,7 @@ import { APP_REPO_URL } from '@shared/appInfo'
 import type { OpenRouterTranscriptionSettings } from '@shared/transcription'
 import type { AudioSource, TranscriptResultEvent } from '@shared/types'
 import { z } from 'zod'
+import { httpFetch } from './HttpFetch'
 import type LoggerService from './LoggerService'
 import RestTranscriptionStream from './RestTranscriptionStream'
 
@@ -85,7 +86,7 @@ export default class OpenRouterService {
   /** Sends one WAV snapshot without logging audio or credential contents. */
   private async transcribe(pcm: Uint8Array, options: StartOptions): Promise<string> {
     const wav = createPcm16Wav(pcm)
-    const response = await fetch('https://openrouter.ai/api/v1/audio/transcriptions', {
+    const response = await httpFetch('https://openrouter.ai/api/v1/audio/transcriptions', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${options.apiKey}`,

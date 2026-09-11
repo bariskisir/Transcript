@@ -4,6 +4,7 @@
 
 import type { ApiBalance } from '@shared/types'
 import { z } from 'zod'
+import { httpFetch } from './HttpFetch'
 
 const projectsSchema = z.object({
   projects: z.array(z.object({ project_id: z.string().min(1) })),
@@ -40,7 +41,7 @@ export default class DeepgramAccountService {
 
   /** Lists projects and treats rejection as an invalid or unauthorized API key. */
   private async fetchProjectIds(apiKey: string): Promise<string[]> {
-    const response = await fetch('https://api.deepgram.com/v1/projects', {
+    const response = await httpFetch('https://api.deepgram.com/v1/projects', {
       headers: { Authorization: `Token ${apiKey}` },
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     })
@@ -54,7 +55,7 @@ export default class DeepgramAccountService {
     const responses = await Promise.all(
       projectIds.map(async (projectId): Promise<ApiBalance[]> => {
         try {
-          const response = await fetch(
+          const response = await httpFetch(
             `https://api.deepgram.com/v1/projects/${encodeURIComponent(projectId)}/balances`,
             {
               headers: { Authorization: `Token ${apiKey}` },

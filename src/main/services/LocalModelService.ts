@@ -17,6 +17,7 @@ import {
   type LocalModelOperationEvent,
 } from '@shared/localTranscription'
 import type LoggerService from './LoggerService'
+import { httpFetch } from './HttpFetch'
 import { createLocalInferenceWorkerSource } from './LocalInferenceWorker'
 
 interface LocalModelCatalogEntry {
@@ -1085,7 +1086,7 @@ const downloadResumableFile = async (
   const existingBytes = expectedBytes > 0 && cachedBytes > expectedBytes ? 0 : cachedBytes
   const headers: Record<string, string> = {}
   if (existingBytes > 0) headers.Range = `bytes=${existingBytes}-`
-  const response = await fetch(url, { headers, signal, redirect: 'follow' })
+  const response = await httpFetch(url, { headers, signal, redirect: 'follow' })
   if (response.status === 416 && existingBytes === expectedBytes) {
     onProgress(existingBytes, expectedBytes)
     return

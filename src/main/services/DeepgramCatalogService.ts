@@ -12,6 +12,7 @@ import {
 } from '@shared/deepgram'
 import type { DeepgramTranscriptionSettings } from '@shared/transcription'
 import { z } from 'zod'
+import { httpFetch } from './HttpFetch'
 import type LoggerService from './LoggerService'
 
 const catalogSchema = z.object({
@@ -126,7 +127,7 @@ export default class DeepgramCatalogService {
   public async getModels(): Promise<DeepgramSpeechModel[]> {
     if (this.models) return structuredClone(this.models)
     try {
-      const response = await fetch(DEEPGRAM_PUBLIC_MODELS_URL)
+      const response = await httpFetch(DEEPGRAM_PUBLIC_MODELS_URL)
       if (!response.ok) throw new Error(`Deepgram catalog returned HTTP ${response.status}.`)
       const models = parseDeepgramCatalog(await response.json())
       if (models.length === 0)
