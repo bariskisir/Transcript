@@ -75,6 +75,11 @@ export default {
     zoomOut: 'Zoom out',
     zoomIn: 'Zoom in',
     resetZoom: 'Reset zoom',
+    contentProtection: 'Content protection',
+    contentProtectionDescription:
+      'Hide the window from screen sharing, screenshots and recordings.',
+    windowOpacity: 'Window opacity',
+    windowOpacityDescription: 'Make the window semi-transparent to see content behind it.',
     traySettings: 'Tray Settings',
     tray: 'Tray',
     trayUnavailable: 'Windows only',
@@ -83,6 +88,13 @@ export default {
     minimizeToTrayOnClose: 'Minimize to tray on close',
     minimizeToTrayOnCloseDescription:
       'Hide the window in the system tray instead of quitting when it is closed.',
+    trayIcon: 'Tray icon',
+    trayIconDescription: 'Choose the system tray icon style.',
+    trayIconDefault: 'Default',
+    trayIconBluetooth: 'Bluetooth',
+    trayIconWeather: 'Weather',
+    showTaskbar: 'Show in taskbar',
+    showTaskbarDescription: 'Show Transcript in the taskbar.',
     startMinimized: 'Start minimized',
     startMinimizedDescription:
       'Start the application hidden in the system tray instead of showing its window.',

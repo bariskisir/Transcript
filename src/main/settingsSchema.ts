@@ -23,6 +23,8 @@ import {
   PAGE_ZOOM_LIMITS,
   TIME_FORMATS,
   THEME_MODES,
+  TRAY_ICON_PRESETS,
+  WINDOW_OPACITY_LIMITS,
   type AppSettings,
 } from '@shared/types'
 import { z } from 'zod'
@@ -80,6 +82,10 @@ const settingsFieldsSchema = z.object({
   speakerDeviceId: z.string().max(512),
   speakerEnabled: z.boolean(),
   alwaysOnTop: z.boolean(),
+  contentProtection: z.boolean(),
+  windowOpacity: z.number().min(WINDOW_OPACITY_LIMITS.min).max(WINDOW_OPACITY_LIMITS.max),
+  trayIcon: z.enum(TRAY_ICON_PRESETS),
+  showTaskbar: z.boolean(),
   showTrayIcon: z.boolean(),
   minimizeToTrayOnClose: z.boolean(),
   startMinimized: z.boolean(),

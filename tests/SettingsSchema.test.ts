@@ -249,6 +249,24 @@ describe('settingsSchema', () => {
     expect(result.success).toBe(true)
   })
 
+  it('accepts hiding both the taskbar entry and the tray icon', () => {
+    const result = settingsSchema.safeParse({
+      ...validSettings,
+      showTaskbar: false,
+      showTrayIcon: false,
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('accepts the taskbar alone when the tray icon is disabled', () => {
+    const result = settingsSchema.safeParse({
+      ...validSettings,
+      showTaskbar: true,
+      showTrayIcon: false,
+    })
+    expect(result.success).toBe(true)
+  })
+
   it('accepts a dynamically discovered Deepgram model identifier', () => {
     const dynamic = {
       ...validSettings,

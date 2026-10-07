@@ -84,6 +84,11 @@ export default {
     zoomOut: 'Réduire',
     zoomIn: 'Agrandir',
     resetZoom: 'Réinitialiser le zoom',
+    contentProtection: 'Protection du contenu',
+    contentProtectionDescription:
+      'Masquer la fenêtre du partage d’écran, des captures et des enregistrements.',
+    windowOpacity: 'Opacité de la fenêtre',
+    windowOpacityDescription: 'Rendre la fenêtre semi-transparente pour voir le contenu derrière.',
     traySettings: 'Paramètres de la zone de notification',
     tray: 'Zone de notification',
     trayUnavailable: 'Windows only',
@@ -92,6 +97,13 @@ export default {
     minimizeToTrayOnClose: 'Réduire dans la zone de notification à la fermeture',
     minimizeToTrayOnCloseDescription:
       "Masquez la fenêtre dans la zone de notification au lieu de quitter l'application.",
+    trayIcon: 'Icône de la barre',
+    trayIconDescription: 'Choisir le style de l’icône système.',
+    trayIconDefault: 'Par défaut',
+    trayIconBluetooth: 'Bluetooth',
+    trayIconWeather: 'Météo',
+    showTaskbar: 'Afficher dans la barre des tâches',
+    showTaskbarDescription: 'Afficher Transcript dans la barre des tâches.',
     startMinimized: 'Démarrer réduit',
     startMinimizedDescription:
       "Démarrez l'application cachée dans la zone de notification au lieu d'afficher sa fenêtre.",

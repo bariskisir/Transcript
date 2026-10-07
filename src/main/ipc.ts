@@ -15,6 +15,7 @@ import {
   AUDIO_SOURCES,
   LOG_LEVELS,
   SESSION_FORMATS,
+  WINDOW_OPACITY_LIMITS,
   type StartSessionRequest,
   type UpdateStateEvent,
 } from '@shared/types'
@@ -147,8 +148,12 @@ export const registerIpc = (window: BrowserWindow, services: IpcServices): void 
       settings.showTrayIcon = false
       settings.minimizeToTrayOnClose = false
       settings.startMinimized = false
+      settings.showTaskbar = true
     }
     window.webContents.setZoomFactor(settings.pageZoom)
+    window.setContentProtection(settings.contentProtection)
+    window.setOpacity(settings.windowOpacity)
+    window.setSkipTaskbar(!settings.showTaskbar)
     if (initialSessions.length === 0) {
       const providerSettings =
         settings.transcriptionProviderSettings[settings.transcriptionProvider]
@@ -179,9 +184,13 @@ export const registerIpc = (window: BrowserWindow, services: IpcServices): void 
       delete patch.showTrayIcon
       delete patch.minimizeToTrayOnClose
       delete patch.startMinimized
+      delete patch.showTaskbar
     }
     const savedSettings = await services.storage.updateSettings(patch)
     window.setAlwaysOnTop(savedSettings.alwaysOnTop)
+    window.setContentProtection(savedSettings.contentProtection)
+    window.setOpacity(savedSettings.windowOpacity)
+    window.setSkipTaskbar(!savedSettings.showTaskbar)
     window.webContents.setZoomFactor(savedSettings.pageZoom)
     services.tray.applySettings(savedSettings)
     services.logger.setLevel(savedSettings.logLevel)
@@ -380,6 +389,21 @@ export const registerIpc = (window: BrowserWindow, services: IpcServices): void 
     assertSender(event.sender)
     if (typeof enabled !== 'boolean') throw new Error('Invalid window preference.')
     window.setAlwaysOnTop(enabled)
+  })
+  ipcMain.handle(IpcChannel.WindowSetOpacity, (event, input: unknown) => {
+    assertSender(event.sender)
+    const opacity = Number(input)
+    if (!Number.isFinite(opacity)) throw new Error('Invalid window opacity.')
+    const clamped = Math.min(
+      WINDOW_OPACITY_LIMITS.max,
+      Math.max(WINDOW_OPACITY_LIMITS.min, opacity),
+    )
+    window.setOpacity(clamped)
+    return clamped
+  })
+  ipcMain.handle(IpcChannel.WindowGetOpacity, (event) => {
+    assertSender(event.sender)
+    return window.getOpacity()
   })
   ipcMain.handle(IpcChannel.WindowMinimize, (event) => {
     assertSender(event.sender)

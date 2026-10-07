@@ -1,6 +1,6 @@
 {
   "name": "transcript",
-  "version": "3.11.3",
+  "version": "3.12.0",
   "description": "Secure real-time desktop transcription",
   "main": "./out/main/index.js",
   "author": "bariskisir",
@@ -87,6 +87,14 @@
       {
         "from": "build/icon.png",
         "to": "icon.png"
+      },
+      {
+        "from": "build/tray-icon-bluetooth.png",
+        "to": "tray-icon-bluetooth.png"
+      },
+      {
+        "from": "build/tray-icon-weather.png",
+        "to": "tray-icon-weather.png"
       }
     ],
     "win": {

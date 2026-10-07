@@ -76,6 +76,9 @@ const openApplicationWindow = async (): Promise<void> => {
     logger,
     settings.showTrayIcon && settings.startMinimized,
   )
+  window.setContentProtection(settings.contentProtection)
+  window.setOpacity(settings.windowOpacity)
+  window.setSkipTaskbar(!settings.showTaskbar)
   const localModels = new LocalModelService(
     applicationPaths.modelsRoot,
     {

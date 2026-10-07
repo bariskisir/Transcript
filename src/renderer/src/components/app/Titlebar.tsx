@@ -2,7 +2,8 @@
  * Renders the draggable desktop title bar and its top-left workspace controls.
  */
 
-import { Button, Tooltip } from 'antd'
+import { useEffect, useState } from 'react'
+import { Button, Slider, Tooltip } from 'antd'
 import {
   PanelLeftClose,
   PanelRightClose,
@@ -14,9 +15,11 @@ import {
 import { useTranslation } from 'react-i18next'
 import logoUrl from '../../../../../build/icon.svg'
 import { useRecordingActions } from '@renderer/hooks/useRecordingActions'
+import { useSettingsActions } from '@renderer/hooks/useSettingsActions'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
 import { useTheme } from '@renderer/context/ThemeProvider'
 import type { AppSettingsPatch } from '@shared/types'
+import { WINDOW_OPACITY_LIMITS } from '@shared/types'
 import { setCompactMode, setPage, setSessionsSidebarOpen } from '@renderer/store/appSlice'
 import AppNavigationActions from './AppNavigationActions'
 import WindowControls from './WindowControls'
@@ -39,9 +42,30 @@ const Titlebar = ({ onSettingsChange }: TitlebarProps): React.JSX.Element => {
   const { theme } = useTheme()
   const light = theme === 'light'
   const recordingActions = useRecordingActions()
+  const settingsActions = useSettingsActions()
+  const persistedOpacity = useAppSelector((state) => state.app.settings.windowOpacity)
+  const [opacityPercent, setOpacityPercent] = useState(() => Math.round(persistedOpacity * 100))
   const stopping = session === 'stopping'
   const recording = session === 'recording'
   const canStop = session === 'connecting' || recording
+
+  /** Keeps the slider in sync when opacity is persisted elsewhere. */
+  useEffect(() => {
+    setOpacityPercent(Math.round(persistedOpacity * 100))
+  }, [persistedOpacity])
+
+  /** Previews opacity live while dragging without writing settings on every step. */
+  const previewOpacity = (percent: number): void => {
+    setOpacityPercent(percent)
+    void window.app.setWindowOpacity(percent / 100).catch(() => undefined)
+  }
+
+  /** Persists the dragged opacity once the slider is released. */
+  const commitOpacity = (percent: number): void => {
+    const windowOpacity =
+      Math.round(percent / 100 / WINDOW_OPACITY_LIMITS.step) * WINDOW_OPACITY_LIMITS.step
+    void settingsActions.saveSettings({ windowOpacity })
+  }
 
   return (
     <header
@@ -84,25 +108,43 @@ const Titlebar = ({ onSettingsChange }: TitlebarProps): React.JSX.Element => {
           </>
         )}
         {compactMode && (
-          <Button
-            className={styles.miniAction ?? ''}
-            {...(light && canStop
-              ? { danger: true as const }
-              : {
-                  type: 'primary' as const,
-                  danger: canStop,
-                  ...(light ? { ghost: true as const } : {}),
-                })}
-            size="small"
-            loading={stopping}
-            disabled={stopping}
-            icon={canStop ? <Square size={12} fill="currentColor" /> : <Radio size={14} />}
-            onClick={() =>
-              void (canStop ? recordingActions.stopRecording() : recordingActions.startRecording())
-            }
-          >
-            {canStop ? t('controls.stop') : t('controls.start')}
-          </Button>
+          <>
+            <Button
+              className={styles.miniAction ?? ''}
+              {...(light && canStop
+                ? { danger: true as const }
+                : {
+                    type: 'primary' as const,
+                    danger: canStop,
+                    ...(light ? { ghost: true as const } : {}),
+                  })}
+              size="small"
+              loading={stopping}
+              disabled={stopping}
+              icon={canStop ? <Square size={12} fill="currentColor" /> : <Radio size={14} />}
+              onClick={() =>
+                void (canStop
+                  ? recordingActions.stopRecording()
+                  : recordingActions.startRecording())
+              }
+            >
+              {canStop ? t('controls.stop') : t('controls.start')}
+            </Button>
+            <Tooltip
+              placement="bottom"
+              title={`${t('settings.windowOpacity')}: ${opacityPercent}%`}
+            >
+              <Slider
+                className={styles.opacitySlider ?? ''}
+                min={Math.round(WINDOW_OPACITY_LIMITS.min * 100)}
+                max={Math.round(WINDOW_OPACITY_LIMITS.max * 100)}
+                step={Math.round(WINDOW_OPACITY_LIMITS.step * 100)}
+                value={opacityPercent}
+                onChange={previewOpacity}
+                onChangeComplete={commitOpacity}
+              />
+            </Tooltip>
+          </>
         )}
       </div>
       <div className={styles.rightActions}>

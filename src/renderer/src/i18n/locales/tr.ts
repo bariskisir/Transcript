@@ -84,6 +84,11 @@ export default {
     zoomOut: 'Uzaklaştır',
     zoomIn: 'Yakınlaştır',
     resetZoom: 'Ölçeği sıfırla',
+    contentProtection: 'İçerik koruma',
+    contentProtectionDescription:
+      'Pencereyi ekran paylaşımı, ekran görüntüleri ve kayıtlardan gizle.',
+    windowOpacity: 'Pencere opaklığı',
+    windowOpacityDescription: 'Arkadaki içeriği görmek için pencereyi yarı saydam yap.',
     traySettings: 'Tepsi Ayarları',
     tray: 'Sistem Tepsisi',
     trayUnavailable: 'Yalnızca Windows',
@@ -92,6 +97,13 @@ export default {
     minimizeToTrayOnClose: 'Kapatınca tepsiye küçült',
     minimizeToTrayOnCloseDescription:
       'Pencere kapatıldığında uygulamadan çıkmak yerine sistem tepsisine gizle.',
+    trayIcon: 'Tepsi simgesi',
+    trayIconDescription: 'Sistem tepsisi simge stilini seç.',
+    trayIconDefault: 'Varsayılan',
+    trayIconBluetooth: 'Bluetooth',
+    trayIconWeather: 'Hava durumu',
+    showTaskbar: 'Görev çubuğunda göster',
+    showTaskbarDescription: 'Transcript’i görev çubuğunda göster.',
     startMinimized: 'Küçültülmüş başlat',
     startMinimizedDescription:
       'Uygulamayı pencereyi göstermek yerine sistem tepsisinde gizli olarak başlatın.',

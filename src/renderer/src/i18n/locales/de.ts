@@ -84,6 +84,11 @@ export default {
     zoomOut: 'Verkleinern',
     zoomIn: 'Vergrößern',
     resetZoom: 'Zoom zurücksetzen',
+    contentProtection: 'Inhaltsschutz',
+    contentProtectionDescription:
+      'Fenster vor Bildschirmfreigabe, Screenshots und Aufnahmen verbergen.',
+    windowOpacity: 'Fensterdeckkraft',
+    windowOpacityDescription: 'Fenster halbtransparent machen, um Inhalte dahinter zu sehen.',
     traySettings: 'Infobereich-Einstellungen',
     tray: 'Infobereich',
     trayUnavailable: 'Windows only',
@@ -92,6 +97,13 @@ export default {
     minimizeToTrayOnClose: 'Beim Schließen in den Infobereich minimieren',
     minimizeToTrayOnCloseDescription:
       'Das Fenster beim Schließen im Infobereich ausblenden, statt die Anwendung zu beenden.',
+    trayIcon: 'Tray-Symbol',
+    trayIconDescription: 'Stil des Taskleistensymbols wählen.',
+    trayIconDefault: 'Standard',
+    trayIconBluetooth: 'Bluetooth',
+    trayIconWeather: 'Wetter',
+    showTaskbar: 'In Taskleiste anzeigen',
+    showTaskbarDescription: 'Transcript in der Taskleiste anzeigen.',
     startMinimized: 'Minimiert starten',
     startMinimizedDescription:
       'Startet die Anwendung im Infobereich ausgeblendet, ohne das Fenster anzuzeigen.',
