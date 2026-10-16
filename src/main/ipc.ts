@@ -34,6 +34,7 @@ import type OpenRouterCatalogService from './services/OpenRouterCatalogService'
 import type StorageService from './services/StorageService'
 import type TranscriptService from './services/TranscriptService'
 import type TrayService from './services/TrayService'
+import type WindowService from './services/WindowService'
 
 const startSchema = z.object({
   settings: settingsSchema,
@@ -63,6 +64,10 @@ const rendererLogSchema = z.object({
   message: z.string().trim().min(1).max(1_000),
   details: z.string().max(8_000).optional(),
 })
+const sidebarStateSchema = z.object({
+  open: z.boolean(),
+  compact: z.boolean(),
+})
 
 const TRUSTED_EXTERNAL_ORIGINS = new Set([
   'https://deepgram.com',
@@ -84,6 +89,7 @@ interface IpcServices {
   transcript: TranscriptService
   tray: TrayService
   updater: AppUpdater
+  windowService: WindowService
   logger: LoggerService
 }
 
@@ -173,6 +179,7 @@ export const registerIpc = (window: BrowserWindow, services: IpcServices): void 
       openRouterModels,
       localModels,
       localEngineState: services.localModels.getEngineState(),
+      sidebar: services.windowService.getSidebarState(),
       platform: process.platform,
       version: app.getVersion(),
     }
@@ -425,6 +432,10 @@ export const registerIpc = (window: BrowserWindow, services: IpcServices): void 
   ipcMain.handle(IpcChannel.WindowIsMaximized, (event) => {
     assertSender(event.sender)
     return window.isMaximized()
+  })
+  ipcMain.handle(IpcChannel.WindowSidebarStateSet, (event, input: unknown) => {
+    assertSender(event.sender)
+    services.windowService.setSidebarState(sidebarStateSchema.parse(input))
   })
   ipcMain.handle(IpcChannel.ThemeSet, (event, theme: unknown) => {
     assertSender(event.sender)

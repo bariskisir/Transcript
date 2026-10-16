@@ -159,6 +159,14 @@ export interface SessionSummary {
   preview: string
 }
 
+/** Stores the sessions sidebar and compact workspace state persisted with window geometry. */
+export interface SidebarState {
+  /** Whether the sessions sidebar is expanded. */
+  open: boolean
+  /** Whether the distraction-free compact workspace is enabled. */
+  compact: boolean
+}
+
 export interface BootstrapPayload {
   settings: AppSettings
   sessions: SessionSummary[]
@@ -168,6 +176,7 @@ export interface BootstrapPayload {
   openRouterModels: OpenRouterSpeechModel[]
   localModels: LocalModelInfo[]
   localEngineState: LocalEngineStateEvent
+  sidebar: SidebarState | null
   platform: DesktopPlatform
   version: string
 }
@@ -314,6 +323,8 @@ export interface TranscriptApi {
   closeWindow(): Promise<void>
   /** Reports whether the main application window is maximized. */
   isWindowMaximized(): Promise<boolean>
+  /** Persists the sessions sidebar and compact workspace state with window geometry. */
+  setSidebarState(state: SidebarState): Promise<void>
   /** Synchronizes native window chrome with the resolved renderer theme. */
   setTheme(theme: Exclude<ThemeMode, 'system'>): Promise<void>
   /** Opens an allow-listed URL in the system browser. */

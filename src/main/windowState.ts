@@ -12,12 +12,16 @@ export interface WindowBounds {
   height: number
 }
 
-/** Stores the last normal bounds and native display mode of the main window. */
+/** Stores the last normal bounds, native display mode, and renderer workspace layout. */
 export interface PersistedWindowState {
   revision: 1
   bounds: WindowBounds
   maximized: boolean
   fullScreen: boolean
+  /** Older documents predate sidebar persistence and remain valid when absent. */
+  sidebar?: { open: boolean } | undefined
+  /** Older documents predate compact-mode persistence and remain valid when absent. */
+  compactMode?: boolean | undefined
 }
 
 const boundsSchema = z.object({
@@ -27,11 +31,17 @@ const boundsSchema = z.object({
   height: z.number().int().min(1).max(100_000),
 })
 
+const sidebarSchema = z.object({
+  open: z.boolean(),
+})
+
 const windowStateSchema = z.object({
   revision: z.literal(1),
   bounds: boundsSchema,
   maximized: z.boolean(),
   fullScreen: z.boolean(),
+  sidebar: sidebarSchema.optional(),
+  compactMode: z.boolean().optional(),
 })
 
 /** Returns validated persisted state or null when the stored document is malformed. */

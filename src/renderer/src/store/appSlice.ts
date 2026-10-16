@@ -102,6 +102,10 @@ const appSlice = createSlice({
       state.localEngineState = action.payload.localEngineState
       state.sessions = action.payload.sessions
       state.currentSession = action.payload.currentSession
+      if (action.payload.sidebar) {
+        state.sessionsSidebarOpen = action.payload.sidebar.open
+        state.compactMode = action.payload.sidebar.compact
+      }
     },
     /** Opens a top-level application page. */
     setPage(state, action: PayloadAction<AppPage>) {

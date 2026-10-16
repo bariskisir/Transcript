@@ -4,12 +4,24 @@ import { describe, expect, it } from 'vitest'
 import { fitWindowBoundsToDisplays, parsePersistedWindowState } from '../src/main/windowState'
 
 describe('parsePersistedWindowState', () => {
-  it('accepts valid normal bounds and display modes', () => {
+  it('accepts valid legacy bounds and display modes without sidebar state', () => {
     const state = {
       revision: 1 as const,
       bounds: { x: -900, y: 40, width: 800, height: 600 },
       maximized: true,
       fullScreen: false,
+    }
+    expect(parsePersistedWindowState(state)).toEqual(state)
+  })
+
+  it('accepts persisted sidebar visibility and compact mode', () => {
+    const state = {
+      revision: 1 as const,
+      bounds: { x: -900, y: 40, width: 800, height: 600 },
+      maximized: false,
+      fullScreen: false,
+      sidebar: { open: false },
+      compactMode: true,
     }
     expect(parsePersistedWindowState(state)).toEqual(state)
   })
@@ -22,6 +34,27 @@ describe('parsePersistedWindowState', () => {
         bounds: { x: 1_000_000, y: 0, width: 800, height: 600 },
         maximized: false,
         fullScreen: false,
+      }),
+    ).toBeNull()
+  })
+
+  it('rejects malformed sidebar and compact-mode state', () => {
+    expect(
+      parsePersistedWindowState({
+        revision: 1,
+        bounds: { x: 0, y: 0, width: 800, height: 600 },
+        maximized: false,
+        fullScreen: false,
+        sidebar: { open: 'collapsed' },
+      }),
+    ).toBeNull()
+    expect(
+      parsePersistedWindowState({
+        revision: 1,
+        bounds: { x: 0, y: 0, width: 800, height: 600 },
+        maximized: false,
+        fullScreen: false,
+        compactMode: 'yes',
       }),
     ).toBeNull()
   })

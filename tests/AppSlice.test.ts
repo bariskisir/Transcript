@@ -67,6 +67,7 @@ function makeBootstrapPayload(overrides: Partial<BootstrapPayload> = {}): Bootst
     openRouterModels: [],
     localModels: [],
     localEngineState: { state: 'unloaded' },
+    sidebar: null,
     platform: 'win32',
     version: '1.0.0',
     ...overrides,
@@ -202,6 +203,20 @@ describe('appSlice', () => {
       const state = reducer(undefined, hydrate(payload))
       expect(state.hasApiKeys.deepgram).toBe(true)
       expect(state.version).toBe('3.0.0')
+    })
+
+    it('applies persisted sidebar and compact mode state', () => {
+      const payload = makeBootstrapPayload({ sidebar: { open: false, compact: true } })
+      const state = reducer(undefined, hydrate(payload))
+      expect(state.sessionsSidebarOpen).toBe(false)
+      expect(state.compactMode).toBe(true)
+    })
+
+    it('keeps the default workspace state when no window state was persisted', () => {
+      const payload = makeBootstrapPayload({ sidebar: null })
+      const state = reducer(undefined, hydrate(payload))
+      expect(state.sessionsSidebarOpen).toBe(true)
+      expect(state.compactMode).toBe(false)
     })
   })
 

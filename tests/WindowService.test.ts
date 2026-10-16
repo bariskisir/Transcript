@@ -2,7 +2,7 @@
  * Verifies main-window startup visibility, including minimized-to-tray startup.
  */
 
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -164,6 +164,52 @@ describe('WindowService', () => {
 
     expect(window?.setFullScreen).toHaveBeenCalledWith(true)
     expect(window?.show).toHaveBeenCalledOnce()
+  })
+
+  it('persists sidebar and compact mode with window geometry when the window closes', async () => {
+    const service = new WindowService(dataRoot)
+    await service.createWindow(createLogger())
+    const window = electronMocks.MockBrowserWindow.instances[0]
+
+    service.setSidebarState({ open: false, compact: true })
+    window?.emit('close')
+
+    const persisted = JSON.parse(readFileSync(join(dataRoot, 'window-state.json'), 'utf8')) as {
+      sidebar?: unknown
+      compactMode?: unknown
+    }
+    expect(persisted.sidebar).toEqual({ open: false })
+    expect(persisted.compactMode).toBe(true)
+  })
+
+  it('restores persisted sidebar and compact mode for the next renderer bootstrap', async () => {
+    writeFileSync(
+      join(dataRoot, 'window-state.json'),
+      JSON.stringify({
+        revision: 1,
+        bounds: { x: 100, y: 100, width: 800, height: 600 },
+        maximized: false,
+        fullScreen: false,
+        sidebar: { open: false },
+        compactMode: true,
+      }),
+    )
+    const service = new WindowService(dataRoot)
+    await service.createWindow(createLogger())
+
+    expect(service.getSidebarState()).toEqual({ open: false, compact: true })
+  })
+
+  it('keeps the sidebar state when window geometry is captured', async () => {
+    const service = new WindowService(dataRoot)
+    await service.createWindow(createLogger())
+    const window = electronMocks.MockBrowserWindow.instances[0]
+
+    service.setSidebarState({ open: false, compact: true })
+    window?.emit('move')
+
+    expect(service.getSidebarState()).toEqual({ open: false, compact: true })
+    window?.emit('close')
   })
 
   it('reveals the window through the load fallback when ready-to-show never fires', async () => {

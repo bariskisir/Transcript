@@ -149,6 +149,7 @@ const openApplicationWindow = async (): Promise<void> => {
     transcript: transcriptService,
     tray,
     updater,
+    windowService,
     logger,
   })
 
